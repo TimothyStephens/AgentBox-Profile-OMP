@@ -33,6 +33,7 @@ from pathlib import Path
 ALLOWED_TOP_LEVEL = {
     "AGENTS.md",
     "README.md",
+    "PARITY.md",
     "THIRD_PARTY.md",
     "plugins.toml",
     "Containerfile",
@@ -50,8 +51,9 @@ ALLOWED_TOP_LEVEL = {
     # Gitignored scratch directory: EGM artifacts (.dev/docs, see AGENTS.md)
     # and show-me's HTML files (.dev/show-me). Allowed at the top level so a
     # run that produced artifacts is not failed for it, as in the Claude
-    # profile repo. Its contents are still subject to the hygiene checks
-    # below, so a secret or an oversized file dropped there is still caught.
+    # profile repo. PARITY.md: .dev/ is skipped by the symlink and size rules
+    # because it is gitignored and never deployed, but the secret-name rule
+    # still applies inside it.
     ".dev",
 }
 
@@ -642,30 +644,43 @@ def check_containerfile(root: Path, rep: Report) -> None:
 
 
 def check_hygiene(root: Path, rep: Report) -> None:
-    """No symlinks (they would not survive a read-only mount and can escape the
-    profile), nothing over 1 MB, and no file whose name looks like a secret."""
+    """Per PARITY.md: no symlinks (they would not survive a read-only mount and
+    can escape the profile) and nothing over 1 MB in tracked paths; a name
+    matching .env*, *.pem or id_* is an error anywhere, .dev/ included; .dev/ is
+    otherwise skipped, because it is gitignored and never deployed."""
     import fnmatch
+
+    dev_dir = root / ".dev"
 
     for dirpath, dirnames, filenames in os.walk(root, topdown=True, followlinks=False):
         here = Path(dirpath)
         if here == root:
             dirnames[:] = [d for d in dirnames if d != ".git"]
         dirnames.sort()
-        for name in list(dirnames):
+        # os.walk(followlinks=False) does not descend into symlinked
+        # directories, so reporting one is enough.
+        in_dev = here == dev_dir or dev_dir in here.parents
+        for name in dirnames:
             entry = here / name
+            if entry == dev_dir or in_dev:
+                continue
             if entry.is_symlink():
                 rep.error(rel_of(root, entry), "symlink (the profile is mounted read-only; keep real directories)")
-                dirnames.remove(name)
         for name in sorted(filenames):
             entry = here / name
             rel = rel_of(root, entry)
+
+            # Secret-looking names are an error anywhere, .dev/ included.
+            secret = next((p for p in SECRET_PATTERNS if fnmatch.fnmatch(name, p)), None)
+            if secret is not None:
+                rep.error(rel, f"name matches '{secret}': secrets and keys never live in the profile")
+                continue
+            if in_dev:
+                continue
+
             if entry.is_symlink():
                 rep.error(rel, "symlink (the profile is mounted read-only; keep real files)")
                 continue
-            for pattern in SECRET_PATTERNS:
-                if fnmatch.fnmatch(name, pattern):
-                    rep.error(rel, f"name matches '{pattern}': secrets and keys never live in the profile")
-                    break
             try:
                 size = entry.stat().st_size
             except OSError as exc:

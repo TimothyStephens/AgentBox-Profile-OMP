@@ -1,26 +1,28 @@
 # Third-party content
 
-Everything vendored into this profile, with the upstream it came from and what
-was changed locally. Update this file in the same commit that adds, moves or
-edits vendored content.
+Everything vendored into this profile. Update this file in the same commit that
+adds, moves or edits vendored content.
 
-Provenance below was verified by fetching each upstream file at its pinned
-commit and diffing it against the vendored copy (2026-11-03).
+Per [PARITY.md](PARITY.md) every entry carries the same six fields: **name**,
+**source URL**, **path**, **commit**, **license**, **local changes**.
 
-## Vendored skills
+Provenance was verified by fetching each upstream file at its pinned commit and
+diffing it against the vendored copy (2026-11-03).
 
-### `skills/show-me`
+## skills/show-me
 
-| | |
+| Field | Value |
 | --- | --- |
-| Source | <https://github.com/humanlayer/skills> — `plugins/show-me/skills/show-me` |
+| Name | `show-me` |
+| Source URL | <https://github.com/humanlayer/skills> |
+| Path | `plugins/show-me/skills/show-me` |
 | Commit | `4d69d20f6e9b57b4fcf0d501ccfb1be961f0f329` |
 | License | MIT — `skills/show-me/LICENSE` (Copyright (c) 2026 HumanLayer) |
 
 **Local changes**
 
-Two edits to the body of `SKILL.md`. The frontmatter is untouched and carries no
-comment: this file is the only record of what was changed.
+Two edits to the body of `SKILL.md`, plus an added `LICENSE`. The frontmatter is
+untouched and carries no comment: this file is the only record.
 
 1. **The HTML artifact is saved, not opened.** Upstream ends the "For a visual
    UI" bullet with "Then open it for the user:" and a
@@ -35,85 +37,80 @@ comment: this file is the only record of what was changed.
    picture, so the plain-text views are preferred and a diagram that must be
    seen rendered belongs in the HTML file. Upstream offers Mermaid without that
    caveat.
+3. **`LICENSE` added to the skill directory.** Upstream has no LICENSE inside
+   `plugins/show-me/skills/show-me/`; this is a verbatim copy of the
+   repository-root `LICENSE` at the pinned commit, so the MIT terms travel with
+   the vendored directory.
 
-Nothing else in the body changed, and no view, example or code block was
-removed other than the `Bash(open …)` block named above.
+Nothing else in the body changed, and no view, example or code block was removed
+other than the `Bash(open …)` block named above.
 
-`LICENSE` was also **added** to the skill directory. Upstream has no LICENSE
-inside `plugins/show-me/skills/show-me/`; this file is a verbatim copy of the
-repository-root `LICENSE` at the pinned commit, placed here so the MIT terms
-travel with the vendored directory.
+*Correction to the build brief:* it said these local changes are described in a
+comment at the top of the frontmatter. There is no such comment and, before the
+two edits above, `SKILL.md` had no local changes at all. It also said the LICENSE
+is upstream "in its folder"; it is not, it is the repo-root license.
 
-**Note for Tim:** the build brief said show-me's local changes are described in
-a comment at the top of its frontmatter. There is no such comment and, before
-the two edits above, the `SKILL.md` had no local changes at all. The brief also
-said the LICENSE is upstream "in its folder"; it is not, it is the repo-root
-license.
+## skills/ub-mode
 
-`disable-model-invocation: true` in its frontmatter is upstream, not a local
-change. OMP normalizes that key to `disableModelInvocation` and reads it as
-`hide` (`reference/omp/skills.md`), so show-me is never listed in the system
-prompt and is reached only as `/skill:show-me` or `skill://show-me`.
-
-### `skills/ub-mode`
-
-| | |
+| Field | Value |
 | --- | --- |
-| Source | <https://github.com/unclebob/ub-mode> — repository root (`SKILL.md`, `LICENSE`) |
+| Name | `ub-mode` |
+| Source URL | <https://github.com/unclebob/ub-mode> |
+| Path | repository root (`SKILL.md`, `LICENSE`) |
 | Commit | `3da62bf3fcfd2034de41f30d920d2739e566171f` |
 | License | MIT — `skills/ub-mode/LICENSE` (Copyright (c) 2026 Robert C. Martin) |
 
 **Local changes**
 
 One frontmatter key added to `SKILL.md`; the body and `LICENSE` are
-byte-identical to upstream.
+byte-identical to upstream. No comment was added to the frontmatter: this file
+is the record.
 
 1. **`disable-model-invocation: true`.** Upstream sets no `hide` or
-   `disable-model-invocation`, so ub-mode was listed in the system prompt and
-   the model could select it on its own — and its description ("Follow the
-   reduced principles when writing or changing code") invites that on any code
-   change, not only when asked. OMP normalizes the key to
-   `disableModelInvocation` and reads it as `hide`
-   (`reference/omp/skills.md`), so the skill is now opt-in: never listed, still
-   reachable as `/skill:ub-mode` and `skill://ub-mode`. `hide` does not disable
-   a skill.
+   `disable-model-invocation`, so ub-mode was listed in the system prompt and the
+   model could select it on its own — and its description ("Follow the reduced
+   principles when writing or changing code") invites that on any code change,
+   not only when asked. OMP normalizes the key to `disableModelInvocation` and
+   reads it as `hide` (`reference/omp/skills.md`), so the skill is now opt-in:
+   never listed, still reachable as `/skill:ub-mode` and `skill://ub-mode`.
+   `hide` does not disable a skill. This matches `AGENTS.md`: "show-me and
+   ub-mode run only when I invoke them."
 
-No comment was added to the frontmatter: this file is the record.
-
-**Note for Tim:** the brief gave the source path as
+*Correction to the build brief:* it gave the path as
 `plugins/ub-mode/skills/ub-mode`. That path does not exist at this commit — the
-repository tree is exactly `LICENSE`, `README.md`, `SKILL.md` at the root, and
-the vendored files match the root copies. The brief also said local changes are
-described in a comment at the top of the frontmatter; there is no such comment
-and there are no local changes.
+tree is exactly `LICENSE`, `README.md`, `SKILL.md` at the root, and the vendored
+files match the root copies. It also said local changes are described in a
+frontmatter comment; there is no such comment.
 
-### `skills/mags-manifest-design`
+## skills/mags-manifest-design
 
-| | |
+| Field | Value |
 | --- | --- |
-| Source | <https://github.com/TimothyStephens/MAGS-CodeDev> — `mags-codedev-extension/skills/mags-manifest-design` |
+| Name | `mags-manifest-design` |
+| Source URL | <https://github.com/TimothyStephens/MAGS-CodeDev> |
+| Path | `mags-codedev-extension/skills/mags-manifest-design` |
 | Commit | `63e0271ae259e973123984fa065b6d00572a277a` |
 | License | Tim's own project; no separate license file vendored |
 
 **Local changes**
 
-- None. `SKILL.md` is byte-identical to upstream.
+None. `SKILL.md` is byte-identical to upstream.
 
-## Vendored documentation
+## reference/omp
 
-### `reference/omp/`
-
-| | |
+| Field | Value |
 | --- | --- |
-| Source | <https://github.com/can1357/oh-my-pi> — `docs/` |
-| Commit | see [`reference/omp/SOURCE_COMMIT`](reference/omp/SOURCE_COMMIT) (`5dc44d3417722796fd96e8be6bee4712023d1667`) |
+| Name | OMP format documentation |
+| Source URL | <https://github.com/can1357/oh-my-pi> |
+| Path | `docs/` |
+| Commit | `5dc44d3417722796fd96e8be6bee4712023d1667` (see [`reference/omp/SOURCE_COMMIT`](reference/omp/SOURCE_COMMIT)) |
 | License | upstream project license; vendored for reference only |
 
 **Local changes**
 
-- None; kept as received. These files are the format spec this repo's READMEs
-  and `tools/check.py` cite. Not shipped into a session — `reference/` is not
-  one of the directories agentbox mounts.
+None; kept as received. These files are the format spec this repo's READMEs and
+`tools/check.py` cite. Not shipped into a session — `reference/` is not one of
+the directories agentbox mounts.
 
 ## Declared, not vendored
 

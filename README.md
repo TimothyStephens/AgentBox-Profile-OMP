@@ -21,6 +21,7 @@ that clone except `./build.sh deploy`, run by Tim on the host.
 | `Containerfile` | — | Optional user image layer (neovim 0.10.4) |
 | `build.sh`, `tools/`, `tests/` | — | Build machinery; never shipped into a session |
 | `THIRD_PARTY.md` | — | Provenance for everything vendored |
+| `PARITY.md` | — | What must stay identical to `agentbox-profile-claude` |
 | `reference/omp/` | — | OMP's own format docs, the spec this repo cites |
 
 Those five directories are mounted read-only into **every OMP session in every
@@ -33,6 +34,14 @@ OMP settings (`config.yml`), `mcp.json` and `mags-codedev.yaml` live in
 Auto-learn writes only to `~/.omp/agent/managed-skills`, which agentbox makes
 per-session and drains to a review inbox at teardown. Nothing here may depend
 on it.
+
+This repo has a sibling, `agentbox-profile-claude`. [`PARITY.md`](PARITY.md) is
+the contract for what must stay identical between them and which differences
+the harness is allowed to force. Read it before changing `AGENTS.md`,
+`build.sh`, `tools/check.py`, `Containerfile`, `plugins.toml`, `THIRD_PARTY.md`
+or this file's section order. Test case names carry that contract: `shared:`
+cases must exist under the same name in both repos, `omp:` cases are this
+harness only.
 
 ## The loop
 
@@ -53,7 +62,7 @@ at least one error. What it enforces is listed in
 [`tools/check.py`](tools/check.py); every rule has a test.
 
 ```sh
-./tests/run.sh      # 48 cases: the rules, the warnings, the host-only refusals
+./tests/run.sh      # 76 cases: the rules, the warnings, the host-only refusals
 ```
 
 Run both. A green `check` with a red `tests/run.sh` means the checker itself
@@ -123,5 +132,6 @@ agentbox. `deploy` and `install` do not and will refuse.
 `check` rejects any unexpected top-level entry, with one exception: `.dev/`,
 which is gitignored and holds EGM's artifacts (`.dev/docs`, see `AGENTS.md`)
 and show-me's HTML files (`.dev/show-me`). A run that produced artifacts still
-passes. Its *contents* are still checked for symlinks, oversized files and
-secret-looking names, so don't park anything sensitive there.
+passes, and `.dev/` is skipped by the symlink and size rules because it is
+never deployed. The secret-name rules (`.env*`, `*.pem`, `id_*`) still apply
+inside it, so don't park anything sensitive there.
