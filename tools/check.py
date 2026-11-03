@@ -54,6 +54,31 @@ ALLOWED_TOP_LEVEL = {
 # validation requires this shape.
 SKILL_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
+# Frontmatter keys documented for a skill, normalized to camelCase.
+#
+# reference/omp/skills.md, "`SKILL.md` frontmatter" lists the OMP skill type's
+# supported fields: name, description, globs, alwaysApply, hide,
+# disableModelInvocation (normalized from kebab-case `disable-model-invocation`)
+# and `enabled: false`. license, allowed-tools and model come from the Claude
+# Code / Agent Skills frontmatter that OMP's claude-dialect providers read.
+#
+# An unknown key is a warning, not an error: conventional scanners (the native
+# `.omp` provider included) preserve extra keys as unknown metadata, so a typo
+# is silently ignored at runtime rather than rejected. Only Agent Plugins
+# packages validate against a closed field set, and this profile is not one.
+KNOWN_SKILL_KEYS = {
+    "name",
+    "description",
+    "license",
+    "allowedTools",
+    "model",
+    "disableModelInvocation",
+    "hide",
+    "globs",
+    "alwaysApply",
+    "enabled",
+}
+
 # reference/omp/marketplace.md, "Naming rules".
 PLUGIN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
@@ -372,6 +397,12 @@ def check_skills(root: Path, rep: Report) -> None:
                     )
                 if fm.get("enabled") is False:
                     rep.warn(skill_rel, "'enabled: false' — this skill is not discovered")
+                for key in fm.raw:
+                    if _normkey(key) not in KNOWN_SKILL_KEYS:
+                        rep.warn(
+                            skill_rel,
+                            f"unknown frontmatter key '{key}': OMP keeps it as metadata and ignores it, so check the spelling",
+                        )
 
         # One level only: reference/omp/skills.md, "Directory layout".
         for dirpath, dirnames, filenames in os.walk(entry, followlinks=False):

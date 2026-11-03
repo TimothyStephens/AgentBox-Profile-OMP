@@ -216,6 +216,13 @@ run_case "loose file in skills/ is rejected" fail \
 	"unexpected file in skills/" \
 	"printf 'x\n' > skills/stray.md"
 
+run_case "documented skill frontmatter keys are accepted" ok "" \
+	"printf -- '---\nname: good-skill\ndescription: Uses every documented key.\nlicense: MIT\nallowed-tools: Read, Bash\nmodel: claude-opus-5\ndisable-model-invocation: true\nhide: true\nglobs: [\"*.ts\"]\nalwaysApply: false\nenabled: true\n---\n\nBody.\n' > skills/good-skill/SKILL.md"
+
+run_case "unknown skill frontmatter key warns but does not fail" warn \
+	"unknown frontmatter key 'descriptionn'" \
+	"printf -- '---\nname: good-skill\ndescription: A valid skill.\ndescriptionn: typo\n---\n\nBody.\n' > skills/good-skill/SKILL.md"
+
 run_case "unclosed frontmatter is rejected" fail \
 	"the frontmatter is never closed" \
 	"printf -- '---\nname: good-skill\ndescription: Unclosed.\n\nBody.\n' > skills/good-skill/SKILL.md"

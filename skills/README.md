@@ -35,6 +35,14 @@ found, `skills/group/<name>/SKILL.md` is not
 | `disable-model-invocation: true` | Agent-Skills spelling of `hide`; normalized to `disableModelInvocation` and read as `hide`. This is how `show-me` stays unlisted while remaining invocable as `/skill:show-me`. |
 | `enabled: false` | Skips the skill entirely. |
 | `globs`, `alwaysApply` | Carried as metadata only. They do **not** auto-invoke a skill. |
+| `license` | SPDX identifier, for vendored skills. Claude Code / Agent Skills frontmatter. |
+| `allowed-tools` | Tool allowlist, read by OMP's claude-dialect providers. |
+| `model` | Model selector, read by OMP's claude-dialect providers. |
+
+Any other key is **kept as unknown metadata and ignored** by conventional
+scanners, the native `.omp` provider included — a misspelled key fails silently
+at runtime rather than erroring. `./build.sh check` therefore *warns* on a key
+outside the list above instead of failing.
 
 ## Invoking
 
