@@ -120,6 +120,8 @@ the live clone fast-forwardable.
 `check` and `tests/run.sh` are the whole inner loop; both work offline inside
 agentbox. `deploy` and `install` do not and will refuse.
 
-One sharp edge: `check` rejects any unexpected top-level entry, and EGM writes
-its artifacts to `.dev/docs` (see `AGENTS.md`). `.dev/` is gitignored, but
-`check` will still flag it — remove it before calling a run green.
+`check` rejects any unexpected top-level entry, with one exception: `.dev/`,
+which is gitignored and holds EGM's artifacts (`.dev/docs`, see `AGENTS.md`)
+and show-me's HTML files (`.dev/show-me`). A run that produced artifacts still
+passes. Its *contents* are still checked for symlinks, oversized files and
+secret-looking names, so don't park anything sensitive there.

@@ -174,6 +174,13 @@ run_case "unexpected top-level entry is rejected" fail \
 	"notes.md: unexpected top-level entry" \
 	"printf 'x\n' > notes.md"
 
+run_case "gitignored .dev/ is allowed at the top level" ok "" \
+	"mkdir -p .dev/docs .dev/show-me && printf 'x\n' > .dev/docs/note.md && printf 'x\n' > .dev/show-me/show-me-thing.html"
+
+run_case ".dev/ contents are still checked for secrets" fail \
+	"name matches '*.pem'" \
+	"mkdir -p .dev && touch .dev/key.pem"
+
 run_case "missing AGENTS.md is rejected" fail \
 	"AGENTS.md: missing" \
 	"rm AGENTS.md"

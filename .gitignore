@@ -1,5 +1,6 @@
-# EGM artifact directory (see AGENTS.md). `./build.sh check` rejects it as an
-# unexpected top-level entry, so remove it before committing.
+# Scratch artifacts: EGM writes to .dev/docs (see AGENTS.md) and show-me writes
+# its HTML files to .dev/show-me. `./build.sh check` allows the directory but
+# still checks its contents, so keep nothing sensitive there.
 .dev/
 
 # Python bytecode from tools/check.py

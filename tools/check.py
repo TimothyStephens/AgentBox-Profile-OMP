@@ -47,6 +47,12 @@ ALLOWED_TOP_LEVEL = {
     "reference",
     ".git",
     ".gitignore",
+    # Gitignored scratch directory: EGM artifacts (.dev/docs, see AGENTS.md)
+    # and show-me's HTML files (.dev/show-me). Allowed at the top level so a
+    # run that produced artifacts is not failed for it, as in the Claude
+    # profile repo. Its contents are still subject to the hygiene checks
+    # below, so a secret or an oversized file dropped there is still caught.
+    ".dev",
 }
 
 # reference/omp/skills.md, "Practical authoring guidance tied to discovery
