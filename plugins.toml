@@ -1,0 +1,57 @@
+# OMP plugins for Tim's agentbox profile.
+#
+# Plugins are DECLARED here and installed by agentbox, in its own sandbox, by
+# `ab profile install omp`. Nothing in this file is fetched by this repo and no
+# plugin content is vendored; see THIRD_PARTY.md.
+#
+# `ab run --no-profile` skips this file along with the rest of the profile.
+#
+# Schema (one [[plugin]] table per plugin, every key required):
+#   id           OMP plugin id, exactly "<name>@<marketplace>".
+#   marketplace  Marketplace name; must equal the part of `id` after "@".
+#   source       Marketplace source, as `/marketplace add <source>` takes it:
+#                GitHub shorthand "owner/repo", a git URL, or a catalog URL.
+#                The repo must carry .omp-plugin/marketplace.json, or
+#                .claude-plugin/marketplace.json as the Claude-compatible
+#                fallback (reference/omp/marketplace.md, "Marketplace sources").
+#   ref          40-character commit sha to pin. Never a branch or tag:
+#                marketplace catalogs are mutable and an unpinned install is
+#                not reproducible.
+#
+# Name rules, enforced by ./build.sh check and by OMP itself: ASCII letters,
+# digits, hyphens and dots; must start and end with a letter or digit; at most
+# 64 characters each; the whole `id` at most 128
+# (reference/omp/marketplace.md, "Naming rules").
+
+[[plugin]]
+# Elephant Goldfish Model. OMP's marketplace reads Claude-plugin catalogs, so
+# this installs from the Claude-format catalog in google/elephant-goldfish-model.
+# Verified on OMP >= 18.12.6. Invoked as /skill:egm-<command> — EGM ships its
+# commands as skills, so they arrive through the skill-command surface rather
+# than as /egm:<command> slash commands.
+# Artifact directory is .dev/docs; see AGENTS.md.
+id = "egm@egm"
+marketplace = "egm"
+source = "google/elephant-goldfish-model"
+ref = "464db031e7dd1b9a79803ac8ea45f55c7c20c5bc"
+
+# ---------------------------------------------------------------------------
+# Tim to decide
+# ---------------------------------------------------------------------------
+#
+# pi-nvim-bridge — the OMP extension that pairs with the neovim 0.10.4 in
+# Containerfile. NOT declared, because its marketplace and package name are not
+# in the vendored reference docs: grepping reference/ for "nvim", "neovim" and
+# "bridge" at commit 5dc44d3417722796fd96e8be6bee4712023d1667 returns only
+# unrelated prose (extension `local://` tool bridges, ACP's writeTextFile, a
+# NATS example). The brief said to declare it only if the name is findable
+# there, so it is listed here instead of guessed at.
+#
+# To add it, Tim needs to supply the install id. An OMP extension can arrive
+# three ways (reference/omp/marketplace.md, reference/omp/extensions.md):
+#   - marketplace plugin  -> a [[plugin]] entry here, as above;
+#   - npm package declaring `omp.extensions` in its package.json;
+#   - `omp plugin link` of a local checkout.
+# Only the first is expressible in this file today. If pi-nvim-bridge is an npm
+# package or a local link, this file needs a second entry kind first — agentbox
+# reads plugins.toml, so that is an `ab` change, not a profile change.
