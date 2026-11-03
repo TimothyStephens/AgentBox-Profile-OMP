@@ -65,7 +65,20 @@ prompt and is reached only as `/skill:show-me` or `skill://show-me`.
 
 **Local changes**
 
-- None. `SKILL.md` and `LICENSE` are both byte-identical to upstream.
+One frontmatter key added to `SKILL.md`; the body and `LICENSE` are
+byte-identical to upstream.
+
+1. **`disable-model-invocation: true`.** Upstream sets no `hide` or
+   `disable-model-invocation`, so ub-mode was listed in the system prompt and
+   the model could select it on its own — and its description ("Follow the
+   reduced principles when writing or changing code") invites that on any code
+   change, not only when asked. OMP normalizes the key to
+   `disableModelInvocation` and reads it as `hide`
+   (`reference/omp/skills.md`), so the skill is now opt-in: never listed, still
+   reachable as `/skill:ub-mode` and `skill://ub-mode`. `hide` does not disable
+   a skill.
+
+No comment was added to the frontmatter: this file is the record.
 
 **Note for Tim:** the brief gave the source path as
 `plugins/ub-mode/skills/ub-mode`. That path does not exist at this commit — the
