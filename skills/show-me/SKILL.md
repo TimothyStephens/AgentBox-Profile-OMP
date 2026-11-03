@@ -115,13 +115,11 @@ function expandSkill(command: string): string {
 }
 ```
 
-- For a visual UI, layout, state comparison, or concept too dense for Mermaid, write one focused HTML file — a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Then open it for the user:
-
-```
-Bash(open path/to/show-me-{description}.html)
-```
+- For a visual UI, layout, state comparison, or concept too dense for Mermaid, write one focused HTML file — a diagram, an infographic, or a short slide deck, whichever fits the point. Match the product's colors, type, spacing, and components; use real labels and data; support desktop and mobile. Save it as `.dev/show-me/show-me-{description}.html` (create the folder; `.dev/` is gitignored) and give the user that path. Don't try to open it: this session runs in a sandbox with no display or browser opener, and the user opens the file on their own machine.
 
 ### guidance
+
+The user reads your reply in a terminal, where Mermaid shows as source text, not a picture. Prefer the plain-text views above; use Mermaid when its source is still easy to read, or put the diagram in the HTML file when it needs to be seen rendered.
 
 Place each visual next to the short text it supports. Keep only the calls, files, props, states, and boundaries needed to answer the user's current question or the options to resolve the current discussion point.
 
