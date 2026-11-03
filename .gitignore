@@ -1,0 +1,7 @@
+# EGM artifact directory (see AGENTS.md). `./build.sh check` rejects it as an
+# unexpected top-level entry, so remove it before committing.
+.dev/
+
+# Python bytecode from tools/check.py
+__pycache__/
+*.pyc
