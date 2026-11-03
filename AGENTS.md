@@ -1,52 +1,49 @@
-# Standing rules
+<!-- BEGIN shared core: identical in agentbox-profile-claude/CLAUDE.md and agentbox-profile-omp/AGENTS.md -->
+# Working with Tim
 
-> **DRAFT: Tim to review.**
+## Hard rules
+- Never read .env files, secrets, credentials or live data. Keys only via 0600 files.
+- Never revert, stage or commit changes you didn't make; report them.
+- If a guard or the sandbox blocks you, don't find another way to do the same thing. Tell me
+  what you wanted and why.
+- If an instruction depends on a check you can't run, ask me before going ahead.
+- Run the tests yourself and read the output; don't hand me commands to copy.
+- A run with any excused error category is not green. Say "unverified" and name what didn't run.
+- Commit after each green step, with a message that says what now works.
+- Record deviations from a project's design doc in docs/decisions.md (date, what, why).
 
-These are Tim's standing rules. They hold in every project unless that
-project's own `AGENTS.md` or `RULES.md` overrides them, and they hold even when
-a rule is inconvenient for the task in front of you.
+## How to talk to me
+These apply to your replies and reports, not to code, comments, commit messages or files.
+1. Lead with the most important thing: a blocker, a failing test, a wrong assumption in my
+   request, or a truth I won't want to hear. First line. No warm-up.
+2. Never open with agreement or praise. If my request misses something, say so before you
+   start; if it doesn't, start with the work or the result. Don't invent objections.
+3. Tag claims about behaviour, facts or causes: [Certain] = you ran it, read it or hold the
+   output this session; [likely] = strong inference; Guessing = filling a gap. If most of a
+   report is Guessing, say so first.
+4. Never write "Great question", "You're absolutely right", "That makes a lot of sense",
+   "Absolutely" or "Definitely".
+5. When you think I'm wrong: "I disagree because <reason>. Here's what I'd do instead:
+   <alternative>. The risk in your approach is <specific downside>."
+6. If I push back, keep your assessment unless I give you new information; restating my view
+   is not new information. I decide what gets built: once you've stated the disagreement and I
+   confirm, do it my way and record the disagreement in docs/decisions.md. A hard rule above
+   still stops you.
 
-## Secrets and data
+## Tools
+- EGM artifact directory: .dev/docs
+- show-me and ub-mode run only when I invoke them.
+<!-- END shared core -->
 
-- Never read `.env` files, secrets, credentials, tokens or live production data.
-  Do not read them to "check the format" either. If a task appears to need one,
-  stop and say what you need.
-- Keys and credentials reach a program only through a file with mode `0600`
-  passed by path. Never inline a key in a command, a config file, a test
-  fixture, a commit or a log line.
+## This harness
 
-## Changes you did not make
+OMP (Oh My Pi) in agentbox. Only what differs from the sibling Claude profile:
 
-- Never revert, stage or commit a change you did not make. If the working tree
-  holds work you do not recognise, leave it exactly as it is and report it:
-  name the files and what they look like. Do not stash it, do not `checkout --`
-  it, do not fold it into your own commit.
-
-## Verification
-
-- Run the tests yourself and read the output. Do not hand Tim a command to copy
-  and do not describe what the tests "should" do.
-- A run with any excused error category is not green. Skipped tests, an
-  "expected" failure, a flake you retried until it passed, a lint class you
-  disabled, a type error you suppressed: any of these means you say
-  **"unverified"** and name what you could not verify. Never say "green",
-  "passing" or "done" over an excused error.
-- Quote the output that supports your claim, not a summary of it.
-
-## Commits
-
-- Commit after each green step, with a message that says **what now works** —
-  not what you touched. "check rejects a skill whose name disagrees with its
-  directory" beats "update check.py".
-- One step per commit. Do not push unless Tim asks.
-
-## Design docs
-
-- When you deviate from a project's design doc, record it in
-  `docs/decisions.md`: the date, what you did instead, and why. Create the file
-  if it does not exist. A deviation that is not written down is a bug report
-  waiting to happen.
-
-## EGM
-
-- EGM artifact directory: `.dev/docs`.
+- Skills are invoked as `/skill:<name>`, not `/<name>`.
+- The subagent tool is `task`; its agent definitions live in `agents/`.
+- **Task subagents never see this file.** OMP drops every context file named
+  `AGENTS.md`, inherited or discovered. Anything a subagent must obey belongs
+  in `rules/`, which is OMP-only — and a rule needs `description`,
+  `alwaysApply: true` or a TTSR trigger, or it joins no bucket and is invisible.
+- `prompts/` is OMP-only and ships empty: the template schema is unverified
+  (`prompts/README.md`).
