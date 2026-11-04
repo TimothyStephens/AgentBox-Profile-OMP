@@ -46,4 +46,4 @@ OMP (Oh My Pi) in agentbox. Only what differs from the sibling Claude profile:
   in `rules/`, which is OMP-only — and a rule needs `description`,
   `alwaysApply: true` or a TTSR trigger, or it joins no bucket and is invisible.
 - `prompts/` is OMP-only and ships empty: the template schema is unverified
-  (`prompts/README.md`).
+  (`docs/prompts.md`).

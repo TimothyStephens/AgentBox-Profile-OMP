@@ -12,16 +12,17 @@ that clone except `./build.sh deploy`, run by Tim on the host.
 | Path | Mounted at | What it is |
 | --- | --- | --- |
 | `AGENTS.md` | folded into the session instructions | Tim's standing rules |
-| `skills/` | `~/.omp/agent/skills` (read-only) | Agent Skills — [format](skills/README.md) |
-| `rules/` | `~/.omp/agent/rules` (read-only) | Rulebook / always-apply / TTSR rules — [format](rules/README.md) |
-| `prompts/` | `~/.omp/agent/prompts` (read-only) | Prompt templates — [format](prompts/README.md) (**schema unverified**) |
-| `agents/` | `~/.omp/agent/agents` (read-only) | Task-agent definitions — [format](agents/README.md) |
-| `commands/` | `~/.omp/agent/commands` (read-only) | File-based slash commands — [format](commands/README.md) |
+| `skills/` | `~/.omp/agent/skills` (read-only) | Agent Skills — [format](docs/skills.md) |
+| `rules/` | `~/.omp/agent/rules` (read-only) | Rulebook / always-apply / TTSR rules — [format](docs/rules.md) |
+| `prompts/` | `~/.omp/agent/prompts` (read-only) | Prompt templates — [format](docs/prompts.md) (**schema unverified**) |
+| `agents/` | `~/.omp/agent/agents` (read-only) | Task-agent definitions — [format](docs/agents.md) |
+| `commands/` | `~/.omp/agent/commands` (read-only) | File-based slash commands — [format](docs/commands.md) |
 | `plugins.toml` | — | Plugins agentbox installs, pinned to commit shas |
 | `Containerfile` | — | Optional user image layer (neovim 0.10.4) |
 | `build.sh`, `tools/`, `tests/` | — | Build machinery; never shipped into a session |
 | `THIRD_PARTY.md` | — | Provenance for everything vendored |
 | `PARITY.md` | — | What must stay identical to `agentbox-profile-claude` |
+| `docs/` | — | Format reference for each load directory, one file per directory |
 | `reference/omp/` | — | OMP's own format docs, the spec this repo cites |
 
 Those five directories are mounted read-only into **every OMP session in every
@@ -47,8 +48,11 @@ harness only.
 
 ### 1. Edit
 
-Add or change a skill, rule, agent or command. Each directory's `README.md` is
-the format reference and links to the vendored OMP doc that is the spec.
+Add or change a skill, rule, agent or command. `docs/<directory>.md` is the
+format reference for each one and links to the vendored OMP doc that is the
+spec. The documentation cannot live inside the directory it documents: those
+are mounted onto discovery paths, so OMP loads whatever is in them — a
+`commands/README.md` becomes a `/README` command in every session.
 
 ### 2. Check
 
@@ -62,7 +66,7 @@ at least one error. What it enforces is listed in
 [`tools/check.py`](tools/check.py); every rule has a test.
 
 ```sh
-./tests/run.sh      # 76 cases: the rules, the warnings, the host-only refusals
+./tests/run.sh      # 85 cases: the rules, the warnings, the host-only refusals
 ```
 
 Run both. A green `check` with a red `tests/run.sh` means the checker itself

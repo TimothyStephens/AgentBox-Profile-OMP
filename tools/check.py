@@ -35,6 +35,10 @@ ALLOWED_TOP_LEVEL = {
     "README.md",
     "PARITY.md",
     "THIRD_PARTY.md",
+    # The documentation for each load directory, one file per directory. It
+    # cannot live inside the directory it documents: those are mounted onto
+    # discovery paths and anything in them is loaded.
+    "docs",
     "plugins.toml",
     "Containerfile",
     "build.sh",
@@ -86,6 +90,10 @@ KNOWN_SKILL_KEYS = {
     "alwaysApply",
     "enabled",
 }
+
+# Documentation that must not sit in a load directory. Case-insensitive, so
+# `readme.md` is caught as well as `README.md`.
+README_RE = re.compile(r"^readme", re.IGNORECASE)
 
 # reference/omp/marketplace.md, "Naming rules".
 PLUGIN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
@@ -306,13 +314,31 @@ def listdir_sorted(path: Path) -> list[Path]:
     return sorted(path.iterdir(), key=lambda p: p.name)
 
 
-def flat_md_dir(root: Path, dirname: str, rep: Report, extensions: tuple[str, ...]) -> list[Path]:
-    """Validate a flat, non-recursive provider directory and return its files.
+def reject_documentation(root: Path, dirname: str, entry: Path, rep: Report) -> bool:
+    """Per PARITY.md, a load directory holds only loadable items.
 
-    Every provider directory agentbox mounts is scanned non-recursively, so a
+    agentbox mounts these directories straight onto a discovery path, so OMP
+    loads whatever is in them: a `commands/README.md` becomes a `/README`
+    command in every session, and a `prompts/README.md` becomes a prompt
+    template. Documentation lives in `docs/<dirname>.md` instead. The match is
+    case-insensitive so `readme.md` is caught too.
+    """
+    if README_RE.match(entry.name):
+        rep.error(
+            rel_of(root, entry),
+            f"load directories hold only loadable items: {dirname}/ is a discovery path, "
+            f"so OMP would load this as content. Move it to docs/{dirname}.md",
+        )
+        return True
+    return False
+
+
+def flat_md_dir(root: Path, dirname: str, rep: Report, extensions: tuple[str, ...]) -> list[Path]:
+    """Validate a flat, non-recursive load directory and return its files.
+
+    Every load directory agentbox mounts is scanned non-recursively, so a
     subdirectory is never discovered and is therefore dead weight, not a
-    feature. README.md is this repo's own documentation and is skipped: it has
-    no frontmatter, so OMP lists it with a body-derived description at worst.
+    feature.
     """
     directory = root / dirname
     files: list[Path] = []
@@ -325,7 +351,7 @@ def flat_md_dir(root: Path, dirname: str, rep: Report, extensions: tuple[str, ..
         if entry.is_dir():
             rep.error(rel, f"unexpected directory in {dirname}/ (discovery is non-recursive, so nothing here is found)")
             continue
-        if entry.name == "README.md":
+        if reject_documentation(root, dirname, entry, rep):
             continue
         if entry.suffix not in extensions:
             allowed = " or ".join(f"*{ext}" for ext in extensions)
@@ -374,9 +400,9 @@ def check_skills(root: Path, rep: Report) -> None:
         rel = rel_of(root, entry)
         if entry.is_symlink():
             continue  # reported by check_hygiene
-        if entry.name == "README.md":
-            continue
         if not entry.is_dir():
+            if reject_documentation(root, "skills", entry, rep):
+                continue
             rep.error(rel, "unexpected file in skills/ (every skill is a directory holding SKILL.md)")
             continue
 
@@ -504,12 +530,12 @@ def check_commands(root: Path, rep: Report) -> None:
 
 def check_prompts(root: Path, rep: Report) -> None:
     """The vendored reference set does not document ~/.omp/agent/prompts (see
-    prompts/README.md), so only structural rules are enforced here."""
+    docs/prompts.md), so only structural rules are enforced here."""
     for path in flat_md_dir(root, "prompts", rep, (".md",)):
         rel = rel_of(root, path)
         fm = read_frontmatter(path, rel, rep, required=False)
         if fm is None or fm.nonempty_str("description") is None:
-            rep.warn(rel, "no frontmatter 'description' (the prompt-template schema is unverified; see prompts/README.md)")
+            rep.warn(rel, "no frontmatter 'description' (the prompt-template schema is unverified; see docs/prompts.md)")
 
 
 def check_plugins(root: Path, rep: Report) -> None:

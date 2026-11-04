@@ -46,7 +46,12 @@ fail() {
 make_good() {
 	local fx="$1"
 	mkdir -p "$fx"/skills/good-skill "$fx"/rules "$fx"/prompts "$fx"/agents \
-		"$fx"/commands "$fx"/tools "$fx"/tests
+		"$fx"/commands "$fx"/tools "$fx"/tests "$fx"/docs
+
+	# The load directories' documentation lives here, never inside them.
+	for dir in skills rules prompts agents commands; do
+		printf '# %s\n' "$dir" >"$fx/docs/$dir.md"
+	done
 
 	printf '# Working with Tim\n\nShort enough.\n' >"$fx/AGENTS.md"
 	printf '# profile\n' >"$fx/README.md"
@@ -220,11 +225,41 @@ run_case "shared: skill directory holds SKILL.md — fail" fail \
 	"rm skills/good-skill/SKILL.md"
 
 run_case "shared: no loose files in skills/ — pass" ok "" \
-	"printf '# skills\n' > skills/README.md"
+	"printf 'x\n' > skills/good-skill/notes.txt"
 
 run_case "shared: no loose files in skills/ — fail" fail \
 	"unexpected file in skills/" \
 	"printf 'x\n' > skills/stray.md"
+
+# --- load directories hold only loadable items -----------------------------
+# agentbox mounts these directories onto discovery paths, so documentation in
+# one is loaded as content: a commands/README.md becomes a /README command.
+
+run_case "shared: load directories hold only loadable items — pass" ok "" \
+	"printf '# skills\n' > docs/skills.md && printf '# more\n' > docs/notes.md"
+
+run_case "shared: README in skills/ — fail" fail \
+	"skills/README.md: load directories hold only loadable items" \
+	"printf '# skills\n' > skills/README.md"
+
+run_case "shared: README in agents/ — fail" fail \
+	"agents/README.md: load directories hold only loadable items" \
+	"printf '# agents\n' > agents/README.md"
+
+run_case "shared: README in commands/ — fail" fail \
+	"commands/README.md: load directories hold only loadable items" \
+	"printf '# commands\n' > commands/README.md"
+
+run_case "shared: lowercase readme in a load directory — fail" fail \
+	"commands/readme.md: load directories hold only loadable items" \
+	"printf '# commands\n' > commands/readme.md"
+
+run_case "shared: non-loadable file in a load directory — pass" ok "" \
+	"printf -- '---\ndescription: A second command.\n---\n\nBody.\n' > commands/second.md"
+
+run_case "shared: non-loadable file in a load directory — fail" fail \
+	"agents/notes.txt: unexpected file in agents/" \
+	"printf 'x\n' > agents/notes.txt"
 
 # --- skill name == dir name ------------------------------------------------
 
@@ -457,6 +492,14 @@ run_case "omp: command has a description — fail" warn \
 run_case "omp: prompts are *.md — fail" fail \
 	"unexpected file in prompts/" \
 	"printf 'x\n' > prompts/example.yaml"
+
+run_case "omp: README in rules/ — fail" fail \
+	"rules/README.md: load directories hold only loadable items" \
+	"printf '# rules\n' > rules/README.md"
+
+run_case "omp: README in prompts/ — fail" fail \
+	"prompts/README.md: load directories hold only loadable items" \
+	"printf '# prompts\n' > prompts/README.md"
 
 run_case "omp: build.sh is executable — fail" warn \
 	"build.sh: warning: not executable" \
