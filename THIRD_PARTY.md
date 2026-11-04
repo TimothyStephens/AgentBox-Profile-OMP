@@ -88,8 +88,8 @@ frontmatter comment; there is no such comment.
 | --- | --- |
 | Name | `mags-manifest-design` |
 | Source URL | <https://github.com/TimothyStephens/MAGS-CodeDev> |
-| Path | `mags-codedev-extension/skills/mags-manifest-design` |
-| Commit | `63e0271ae259e973123984fa065b6d00572a277a` |
+| Path | `skills/mags-manifest-design/SKILL.md` |
+| Commit | `d44fea8c5bf4021e3103ee9671a06940fc7f713c` |
 | License | Tim's own project; no separate license file vendored |
 
 **Local changes**

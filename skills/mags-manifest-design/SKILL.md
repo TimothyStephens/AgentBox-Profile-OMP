@@ -1,11 +1,13 @@
 ---
 name: mags-manifest-design
-description: Use when creating or editing a MAGs-CodeDev manifest.json. Covers module decomposition, dependency modeling, and writing effective descriptions.
+description: Use when creating or editing a MAGs-CodeDev manifest.json. Covers module decomposition, dependency modeling, writing effective descriptions, and checking the result with `mags-codedev validate`.
 ---
 
 # MAGs-CodeDev Manifest Design
 
 A manifest (`manifest.json`) is a JSON array of module specs. The build system computes a DAG from the `dependencies` field and builds modules in topological waves. Getting the manifest right is the single highest-leverage decision — the quality of the generated code depends on how well the modules are decomposed and described.
+
+Always finish by running `mags-codedev validate` (offline, no LLM calls); `mags-codedev build` runs the same checks and refuses to build an invalid manifest.
 
 ## Structure
 
@@ -21,9 +23,11 @@ A manifest (`manifest.json`) is a JSON array of module specs. The build system c
 
 | Field | Required | Purpose |
 |---|---|---|
-| `location` | yes | Relative file path (e.g. `src/core/types.py`) |
-| `description` | yes | Instructions given to the coder agent — be specific |
-| `dependencies` | yes (can be `[]`) | Array of `location` values this module imports from |
+| `location` | yes | Relative file path inside the repo (e.g. `src/core/types.py`), unique, no `..` |
+| `description` | yes | Instructions given to the coder agent — be specific, non-empty |
+| `dependencies` | no (defaults to `[]`) | Array of `location` values this module imports from |
+
+`mags-codedev validate` checks exactly this: the JSON shape, the required fields and their types, unique locations, locations that are relative and inside the repo, dependencies that name a module in the manifest, and the absence of cycles (it prints the cycle). It makes no LLM calls and needs no network, so run it as often as you like.
 
 ## Decomposition principles
 
@@ -33,7 +37,7 @@ A manifest (`manifest.json`) is a JSON array of module specs. The build system c
 
 3. **Dependencies = imports.** A module's `dependencies` list every other manifest module it `import`s from. If module B uses a class defined in module A, B depends on A. The build system injects A's source code into B's prompt so the coder knows the interface.
 
-4. **No cycles.** If A depends on B and B depends on A, the build will detect the cycle and abort. Refactor to break the cycle (extract shared code into a third module).
+4. **No cycles.** If A depends on B and B depends on A, `mags-codedev validate` (which `build` runs first) prints the cycle and refuses to build. Refactor to break the cycle (extract shared code into a third module).
 
 5. **Right granularity.** Too coarse (one module = whole subsystem) → the agent can't focus. Too fine (one module per function) → the agent can't see context. Aim for 50–300 lines per module.
 
@@ -125,11 +129,24 @@ A pipeline project decomposed into 8 modules:
 ]
 ```
 
+## Workflow
+
+```bash
+$EDITOR .mags-codedev/manifest.json
+mags-codedev validate                      # offline; fix every line it prints
+mags-codedev build                          # runs validate first, then builds
+mags-codedev build --module src/core/types.py   # rerun one module after a spec edit
+```
+
+`validate` exits 1 with one problem per line, and `build` stops on the same
+checks before starting any module, so a bad manifest costs no tokens.
+
 ## Tips
 
 - Order doesn't matter — the build system computes topological order.
-- Editing a description auto-invalidates that module on the next build (spec-aware rebuild).
-- Use `mags_build --module <location>` to rerun a single module after editing its spec.
+- Editing a `description` or `dependencies` auto-invalidates that module on the next build (spec-aware rebuild); no `--force-fresh` needed.
+- `mags-codedev build --module <location>` reruns a single module after editing its spec, even if it was already built.
 - Modules with no dependencies build in the first wave (in parallel).
 - The tester agent sees the module code + dependency source — it can test cross-module integration.
 - Keep descriptions in plain English (no JSON, no code blocks) — the coder agent writes the actual code.
+- A failed module blocks its dependents but not independent modules; `build` exits 1 if anything failed or was blocked.
