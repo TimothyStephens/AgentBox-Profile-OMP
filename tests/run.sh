@@ -250,9 +250,32 @@ run_case "shared: README in commands/ — fail" fail \
 	"commands/README.md: load directories hold only loadable items" \
 	"printf '# commands\n' > commands/README.md"
 
-run_case "shared: lowercase readme in a load directory — fail" fail \
+run_case "shared: README inside a skill directory — fail" fail \
+	"skills/good-skill/README.md: load directories hold only loadable items" \
+	"printf '# the skill\n' > skills/good-skill/README.md"
+
+run_case "shared: nested README in a load directory — fail" fail \
+	"commands/x/README.md: load directories hold only loadable items" \
+	"mkdir commands/x && printf '# commands\n' > commands/x/README.md"
+
+run_case "shared: lowercase readme in skills/ — fail" fail \
+	"skills/readme.md: load directories hold only loadable items" \
+	"printf '# skills\n' > skills/readme.md"
+
+run_case "shared: lowercase readme in agents/ — fail" fail \
+	"agents/readme.md: load directories hold only loadable items" \
+	"printf '# agents\n' > agents/readme.md"
+
+run_case "shared: lowercase readme in commands/ — fail" fail \
 	"commands/readme.md: load directories hold only loadable items" \
 	"printf '# commands\n' > commands/readme.md"
+
+run_case "shared: load directories other than skills/ are optional — pass" ok "" \
+	"rm -rf rules prompts agents commands"
+
+run_case "shared: load directories other than skills/ are optional — fail" fail \
+	"skills: missing" \
+	"rm -rf skills"
 
 run_case "shared: non-loadable file in a load directory — pass" ok "" \
 	"printf -- '---\ndescription: A second command.\n---\n\nBody.\n' > commands/second.md"
@@ -500,6 +523,14 @@ run_case "omp: README in rules/ — fail" fail \
 run_case "omp: README in prompts/ — fail" fail \
 	"prompts/README.md: load directories hold only loadable items" \
 	"printf '# prompts\n' > prompts/README.md"
+
+run_case "omp: lowercase readme in rules/ — fail" fail \
+	"rules/readme.md: load directories hold only loadable items" \
+	"printf '# rules\n' > rules/readme.md"
+
+run_case "omp: lowercase readme in prompts/ — fail" fail \
+	"prompts/readme.md: load directories hold only loadable items" \
+	"printf '# prompts\n' > prompts/readme.md"
 
 run_case "omp: build.sh is executable — fail" warn \
 	"build.sh: warning: not executable" \

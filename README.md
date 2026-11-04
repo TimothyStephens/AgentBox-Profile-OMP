@@ -66,7 +66,7 @@ at least one error. What it enforces is listed in
 [`tools/check.py`](tools/check.py); every rule has a test.
 
 ```sh
-./tests/run.sh      # 85 cases: the rules, the warnings, the host-only refusals
+./tests/run.sh      # 93 cases: the rules, the warnings, the host-only refusals
 ```
 
 Run both. A green `check` with a red `tests/run.sh` means the checker itself

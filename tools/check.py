@@ -91,8 +91,13 @@ KNOWN_SKILL_KEYS = {
     "enabled",
 }
 
-# Documentation that must not sit in a load directory. Case-insensitive, so
-# `readme.md` is caught as well as `README.md`.
+# The directories agentbox mounts onto an OMP discovery path. Per PARITY.md
+# they hold only loadable items, and all but skills/ are optional.
+LOAD_DIRECTORIES = ("skills", "rules", "prompts", "agents", "commands")
+
+# Documentation that must not sit in a load directory, at any depth.
+# Case-insensitive, so `readme.md` is caught as well as `README.md` — a
+# lowercase one is still a `.md` file and would otherwise load.
 README_RE = re.compile(r"^readme", re.IGNORECASE)
 
 # reference/omp/marketplace.md, "Naming rules".
@@ -314,23 +319,32 @@ def listdir_sorted(path: Path) -> list[Path]:
     return sorted(path.iterdir(), key=lambda p: p.name)
 
 
-def reject_documentation(root: Path, dirname: str, entry: Path, rep: Report) -> bool:
-    """Per PARITY.md, a load directory holds only loadable items.
+def check_load_directories(root: Path, rep: Report) -> None:
+    """Per PARITY.md: load directories hold only loadable items — no README*
+    file at any depth (case-insensitive) — and all but skills/ are optional.
 
     agentbox mounts these directories straight onto a discovery path, so OMP
     loads whatever is in them: a `commands/README.md` becomes a `/README`
     command in every session, and a `prompts/README.md` becomes a prompt
-    template. Documentation lives in `docs/<dirname>.md` instead. The match is
-    case-insensitive so `readme.md` is caught too.
+    template. Documentation lives in `docs/<dirname>.md` instead. This is the
+    one place a README* is reported; the per-directory checks skip them so one
+    misplaced file does not produce two errors.
     """
-    if README_RE.match(entry.name):
-        rep.error(
-            rel_of(root, entry),
-            f"load directories hold only loadable items: {dirname}/ is a discovery path, "
-            f"so OMP would load this as content. Move it to docs/{dirname}.md",
-        )
-        return True
-    return False
+    for dirname in LOAD_DIRECTORIES:
+        directory = root / dirname
+        if not directory.is_dir():
+            if dirname == "skills":
+                rep.error(dirname, "missing (skills/ is the one load directory that is not optional)")
+            continue
+        for dirpath, dirnames, filenames in os.walk(directory, followlinks=False):
+            dirnames.sort()
+            for name in sorted(filenames):
+                if README_RE.match(name):
+                    rep.error(
+                        rel_of(root, Path(dirpath) / name),
+                        f"load directories hold only loadable items: {dirname}/ is a discovery path, "
+                        f"so OMP would load this as content. Move it to docs/{dirname}.md",
+                    )
 
 
 def flat_md_dir(root: Path, dirname: str, rep: Report, extensions: tuple[str, ...]) -> list[Path]:
@@ -351,8 +365,8 @@ def flat_md_dir(root: Path, dirname: str, rep: Report, extensions: tuple[str, ..
         if entry.is_dir():
             rep.error(rel, f"unexpected directory in {dirname}/ (discovery is non-recursive, so nothing here is found)")
             continue
-        if reject_documentation(root, dirname, entry, rep):
-            continue
+        if README_RE.match(entry.name):
+            continue  # reported by check_load_directories
         if entry.suffix not in extensions:
             allowed = " or ".join(f"*{ext}" for ext in extensions)
             rep.error(rel, f"unexpected file in {dirname}/ (only {allowed} is discovered)")
@@ -401,8 +415,8 @@ def check_skills(root: Path, rep: Report) -> None:
         if entry.is_symlink():
             continue  # reported by check_hygiene
         if not entry.is_dir():
-            if reject_documentation(root, "skills", entry, rep):
-                continue
+            if README_RE.match(entry.name):
+                continue  # reported by check_load_directories
             rep.error(rel, "unexpected file in skills/ (every skill is a directory holding SKILL.md)")
             continue
 
@@ -735,6 +749,7 @@ def main(argv: list[str] | None = None) -> int:
 
     rep = Report()
     check_top_level(root, rep)
+    check_load_directories(root, rep)
     check_skills(root, rep)
     check_rules(root, rep)
     check_prompts(root, rep)
