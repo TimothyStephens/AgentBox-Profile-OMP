@@ -52,7 +52,7 @@ make_good() {
 		printf '# %s\n' "$dir" >"$fx/docs/$dir.md"
 	done
 
-	printf '# Working with Tim\n\nShort enough.\n' >"$fx/AGENTS.md"
+	printf '# Working rules\n\nShort enough.\n' >"$fx/AGENTS.md"
 	printf '# profile\n' >"$fx/README.md"
 	printf '# third party\n' >"$fx/THIRD_PARTY.md"
 	printf '#!/usr/bin/env bash\ntrue\n' >"$fx/build.sh"
@@ -193,7 +193,7 @@ run_case "shared: only documented top-level entries — fail" fail \
 # sibling. The rule is the same.
 
 run_case "shared: instruction file present — pass" ok "" \
-	"printf '# Working with Tim\n\nRules.\n' > AGENTS.md"
+	"printf '# Working rules\n\nRules.\n' > AGENTS.md"
 
 run_case "shared: instruction file present — fail" fail \
 	"AGENTS.md: missing" \

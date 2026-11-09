@@ -1,5 +1,5 @@
 <!-- BEGIN shared core: identical in agentbox-profile-claude/CLAUDE.md and agentbox-profile-omp/AGENTS.md -->
-# Working with Tim
+# Working rules
 
 ## Hard rules
 - Never read .env files, secrets, credentials or live data. Keys only via 0600 files.
@@ -45,5 +45,5 @@ OMP (Oh My Pi) in agentbox. Only what differs from the sibling Claude profile:
   `AGENTS.md`, inherited or discovered. Anything a subagent must obey belongs
   in `rules/`, which is OMP-only — and a rule needs `description`,
   `alwaysApply: true` or a TTSR trigger, or it joins no bucket and is invisible.
-- `prompts/` is OMP-only and ships empty: the template schema is unverified
-  (`docs/prompts.md`).
+- `prompts/` is OMP-only and ships empty: the vendored OMP docs do not specify
+  its format (`docs/prompts.md`).

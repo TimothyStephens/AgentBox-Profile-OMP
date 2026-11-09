@@ -1,5 +1,5 @@
 #!/usr/bin/env python3
-"""Offline consistency check for Tim's agentbox OMP profile.
+"""Offline consistency check for this agentbox OMP profile.
 
 Reads nothing but this repository: no network, no `ab`, no OMP, no live
 profile. Every problem is printed as `path: problem` on stdout, one per line,
@@ -543,13 +543,13 @@ def check_commands(root: Path, rep: Report) -> None:
 
 
 def check_prompts(root: Path, rep: Report) -> None:
-    """The vendored reference set does not document ~/.omp/agent/prompts (see
+    """The vendored OMP docs do not specify the prompt-template format (see
     docs/prompts.md), so only structural rules are enforced here."""
     for path in flat_md_dir(root, "prompts", rep, (".md",)):
         rel = rel_of(root, path)
         fm = read_frontmatter(path, rel, rep, required=False)
         if fm is None or fm.nonempty_str("description") is None:
-            rep.warn(rel, "no frontmatter 'description' (the prompt-template schema is unverified; see docs/prompts.md)")
+            rep.warn(rel, "no frontmatter 'description' (the prompt-template format is not specified; see docs/prompts.md)")
 
 
 def check_plugins(root: Path, rep: Report) -> None:

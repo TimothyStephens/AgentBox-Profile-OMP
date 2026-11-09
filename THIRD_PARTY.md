@@ -45,11 +45,6 @@ untouched and carries no comment: this file is the only record.
 Nothing else in the body changed, and no view, example or code block was removed
 other than the `Bash(open …)` block named above.
 
-*Correction to the build brief:* it said these local changes are described in a
-comment at the top of the frontmatter. There is no such comment and, before the
-two edits above, `SKILL.md` had no local changes at all. It also said the LICENSE
-is upstream "in its folder"; it is not, it is the repo-root license.
-
 ## skills/ub-mode
 
 | Field | Value |
@@ -76,12 +71,6 @@ is the record.
    `hide` does not disable a skill. This matches `AGENTS.md`: "show-me and
    ub-mode run only when I invoke them."
 
-*Correction to the build brief:* it gave the path as
-`plugins/ub-mode/skills/ub-mode`. That path does not exist at this commit — the
-tree is exactly `LICENSE`, `README.md`, `SKILL.md` at the root, and the vendored
-files match the root copies. It also said local changes are described in a
-frontmatter comment; there is no such comment.
-
 ## skills/mags-manifest-design
 
 | Field | Value |
@@ -90,7 +79,7 @@ frontmatter comment; there is no such comment.
 | Source URL | <https://github.com/TimothyStephens/MAGS-CodeDev> |
 | Path | `skills/mags-manifest-design/SKILL.md` |
 | Commit | `d44fea8c5bf4021e3103ee9671a06940fc7f713c` |
-| License | Tim's own project; no separate license file vendored |
+| License | none published upstream; the repository belongs to this profile's maintainer |
 
 **Local changes**
 

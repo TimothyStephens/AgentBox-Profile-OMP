@@ -1,5 +1,5 @@
 #!/usr/bin/env bash
-# Build/deploy driver for Tim's OMP profile. See README.md.
+# Build/deploy driver for this OMP profile. See README.md.
 #
 #   ./build.sh check     offline validation of this repo          (anywhere)
 #   ./build.sh status    live profile vs this repo, plugin pins   (anywhere)

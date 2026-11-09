@@ -1,4 +1,4 @@
-# Optional user image layer for Tim's agentbox OMP profile.
+# Optional user image layer for this agentbox OMP profile.
 #
 # agentbox builds this with `ab image build omp` and passes the current
 # agentbox-omp tag as BASE, so this file must start with `ARG BASE` followed by

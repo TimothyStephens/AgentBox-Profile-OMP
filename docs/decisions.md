@@ -8,6 +8,6 @@
   and how they call `tools/check.py`. The OMP `deploy` therefore clones the live profile on first
   run, matches the live clone by `origin` URL rather than root commit, and no longer checks for a
   detached HEAD.
-- Why: Tim asked for the Claude repo's latest `build.sh` changes to be synced to the OMP repo and
-  for the parity discussion to come out of the README and `PARITY.md`, since the review that did
-  the sync made the repos match. The shared parts are now listed in one paragraph of each README.
+- Why: the Claude repo's latest `build.sh` changes were to be synced to the OMP repo, and the
+  parity discussion taken out of the README and `PARITY.md`, since the review that did the sync
+  made the repos match. The shared parts are now listed in one paragraph of each README.

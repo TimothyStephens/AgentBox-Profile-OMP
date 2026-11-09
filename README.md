@@ -1,20 +1,20 @@
 # agentbox-profile-omp
 
-Tim's personal OMP (Oh My Pi) profile for agentbox (`ab`), a rootless-podman
-sandbox launcher.
+An OMP (Oh My Pi) profile for agentbox (`ab`), a rootless-podman sandbox
+launcher.
 
 **This repository is the source.** The profile agentbox actually reads is a git
 clone of it at `~/.config/agentbox/omp/profile`. Nothing in this repo writes to
-that clone except `./build.sh deploy`, run by Tim on the host.
+that clone except `./build.sh deploy`, run on the host.
 
 ## Layout
 
 | Path | Mounted at | What it is |
 | --- | --- | --- |
-| `AGENTS.md` | folded into the session instructions | Tim's standing rules |
+| `AGENTS.md` | folded into the session instructions | Standing rules for every session |
 | `skills/` | `~/.omp/agent/skills` (read-only) | Agent Skills — [format](docs/skills.md) |
 | `rules/` | `~/.omp/agent/rules` (read-only) | Rulebook / always-apply / TTSR rules — [format](docs/rules.md) |
-| `prompts/` | `~/.omp/agent/prompts` (read-only) | Prompt templates — [format](docs/prompts.md) (**schema unverified**) |
+| `prompts/` | `~/.omp/agent/prompts` (read-only) | Prompt templates — [format](docs/prompts.md); ships empty |
 | `agents/` | `~/.omp/agent/agents` (read-only) | Task-agent definitions — [format](docs/agents.md) |
 | `commands/` | `~/.omp/agent/commands` (read-only) | File-based slash commands — [format](docs/commands.md) |
 | `plugins.toml` | — | Plugins agentbox installs, pinned to commit shas |
@@ -72,9 +72,9 @@ changed behaviour.
 ### 3. Commit
 
 One commit per green step, with a message that says what now works. Don't push
-unless Tim asks.
+unless asked.
 
-### 4. Tim deploys
+### 4. Deploy
 
 On the host, not in a sandbox:
 
