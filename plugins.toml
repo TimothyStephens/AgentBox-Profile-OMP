@@ -1,5 +1,3 @@
-# OMP plugins for Tim's agentbox profile.
-#
 # Plugins are DECLARED here and installed by agentbox, in its own sandbox, by
 # `ab profile install omp`. Nothing in this file is fetched by this repo and no
 # plugin content is vendored; see THIRD_PARTY.md.
@@ -22,36 +20,101 @@
 # digits, hyphens and dots; must start and end with a letter or digit; at most
 # 64 characters each; the whole `id` at most 128
 # (reference/omp/marketplace.md, "Naming rules").
+#
+# An OMP plugin can arrive three ways (reference/omp/marketplace.md, reference/omp/extensions.md), and
+# each is a section here:
+#
+#   [[plugin]]  a MARKETPLACE plugin. The source repo carries .omp-plugin/marketplace.json, or
+#               .claude-plugin/marketplace.json as the Claude-compatible fallback.
+#                 id           exactly "<name>@<marketplace>"
+#                 marketplace  must equal the part of `id` after "@"
+#                 source       GitHub shorthand "owner/repo", a git URL, or a catalog URL
+#                 ref          40-character commit sha
+#   [[npm]]     an npm package that declares `omp.extensions` in its package.json.
+#                 name         npm package name, scoped or not
+#                 version      exact version; a range or `latest` is refused
+#   [[repo]]    a git checkout, linked with `omp plugin link`, for an extension that is neither on npm nor
+#               carrying a marketplace catalog.
+#                 name         directory name in the installed tree
+#                 url          https:// git URL
+#                 ref          40-character commit sha
+#                 extension_dir  subdirectory holding the extension; "." when the repo is it (default)
+#
+# `ref` IS ALWAYS A 40-CHARACTER SHA -- never a branch or tag. The reason is the profile's own: marketplace
+# catalogs are mutable, so an unpinned install is not reproducible. It applies to [[repo]] for the same
+# reason: a branch would make the tree a session mounts depend on when it happened to be installed.
+# `git ls-remote <url> <branch>` is where a sha comes from, and `ab profile install --resolve` will print
+# the current one for every entry so a bump is one command rather than a lookup.
+#
+# Name rules, enforced here and by OMP itself: ASCII letters, digits, hyphens and dots; start and end with
+# a letter or digit; at most 64 characters each, and the whole `id` at most 128.
+#
+# An unknown key or section is an ERROR, not an ignored line: a typo'd `verison` would leave an entry with
+# no version at all.
+#
+# `ab run --no-profile` skips this file with the rest of the profile.
 
+# --- marketplace plugins ---------------------------------------------------------------------------
+
+# Elephant Goldfish Model, from the Claude-format catalog in google/elephant-goldfish-model. Already in
+# Tim's profile; the ref is his.
 [[plugin]]
-# Elephant Goldfish Model. OMP's marketplace reads Claude-plugin catalogs, so
-# this installs from the Claude-format catalog in google/elephant-goldfish-model.
-# Verified on OMP >= 18.12.6. Invoked as /skill:egm-<command> — EGM ships its
-# commands as skills, so they arrive through the skill-command surface rather
-# than as /egm:<command> slash commands.
-# Artifact directory is .dev/docs; see AGENTS.md.
 id = "egm@egm"
 marketplace = "egm"
 source = "google/elephant-goldfish-model"
 ref = "464db031e7dd1b9a79803ac8ea45f55c7c20c5bc"
 
-# ---------------------------------------------------------------------------
-# Tim to decide
-# ---------------------------------------------------------------------------
+# --- npm packages ----------------------------------------------------------------------------------
 #
-# pi-nvim-bridge — the OMP extension that pairs with the neovim 0.10.4 in
-# Containerfile. NOT declared, because its marketplace and package name are not
-# in the vendored reference docs: grepping reference/ for "nvim", "neovim" and
-# "bridge" at commit 5dc44d3417722796fd96e8be6bee4712023d1667 returns only
-# unrelated prose (extension `local://` tool bridges, ACP's writeTextFile, a
-# NATS example). The brief said to declare it only if the name is findable
-# there, so it is listed here instead of guessed at.
+# These four were installed by omp-env with `npm install -g`. THE VERSIONS BELOW ARE THE CURRENT ONES
+# (npm registry, 5 Nov 2026), not omp-env's, and that is a deliberate change of pin: omp-env's numbers
+# were installed against OMP 18.1.11 while the image pins 18.13.3, and the one failure actually seen from
+# that drift was pi-statusline's `stripTerminalSequences` (4 Nov). An older plugin against a newer OMP is
+# the combination known to be broken here. omp-env's versions are in the comments if you want to go back.
 #
-# To add it, Tim needs to supply the install id. An OMP extension can arrive
-# three ways (reference/omp/marketplace.md, reference/omp/extensions.md):
-#   - marketplace plugin  -> a [[plugin]] entry here, as above;
-#   - npm package declaring `omp.extensions` in its package.json;
-#   - `omp plugin link` of a local checkout.
-# Only the first is expressible in this file today. If pi-nvim-bridge is an npm
-# package or a local link, this file needs a second entry kind first — agentbox
-# reads plugins.toml, so that is an `ab` change, not a profile change.
+# @isac322/pi-codegraph (omp-env had 0.3.1, latest 0.5.2) is NOT here: it was not in the list Tim asked
+# for. One [[npm]] entry adds it back.
+
+[[npm]]
+name = "@narumitw/pi-statusline"
+version = "0.50.4"             # omp-env: 0.38.0
+
+[[npm]]
+name = "pi-context-prune"
+version = "2.2.0"              # omp-env: 1.2.0
+
+[[npm]]
+name = "pi-lens"
+version = "4.4.9"              # omp-env: 3.8.73
+
+[[npm]]
+name = "pi-rules"
+version = "0.1.1"              # unchanged since omp-env
+
+# --- git checkouts ---------------------------------------------------------------------------------
+#
+# Each ref is `git ls-remote <url> main` as of 5 Nov 2026. MAGS arrives this way: omp-env cloned the repo
+# and pointed OMP at `mags-codedev-extension`, which is what settles that MAGS is an OMP extension rather
+# than a standalone tool.
+#
+# pi-nvim-bridge is NOT here: Tim does not need it. (The profile's own note already said its install id was
+# not findable in the vendored reference docs.)
+
+[[repo]]
+name = "mags-codedev"
+url = "https://github.com/TimothyStephens/MAGS-CodeDev.git"
+ref = "d44fea8c5bf4021e3103ee9671a06940fc7f713c"
+extension_dir = "mags-codedev-extension"
+
+[[repo]]
+name = "pi-session-stats"
+url = "https://github.com/TimothyStephens/pi-session-stats.git"
+ref = "9c7a0c2dd1900dcd98aa7be0d84bbee214967d96"
+
+[[repo]]
+name = "pi-content-audit"
+url = "https://github.com/TimothyStephens/pi-content-audit.git"
+ref = "7aa11e085d2be4a2327307d8121977f200e0e0ce"
+
+
+
