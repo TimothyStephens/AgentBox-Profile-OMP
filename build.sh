@@ -1,291 +1,234 @@
 #!/usr/bin/env bash
+# Build/deploy driver for Tim's OMP profile. See README.md.
 #
-# Build/deploy driver for Tim's agentbox OMP profile.
+#   ./build.sh check     offline validation of this repo          (anywhere)
+#   ./build.sh status    live profile vs this repo, plugin pins   (anywhere)
+#   ./build.sh deploy    clone the live profile, or fast-forward it (host only)
+#   ./build.sh install   ab profile install + ab image build      (host only)
+#   ./build.sh all       check, deploy, install; stop on failure  (host only)
 #
-#   ./build.sh check     offline validation of this repository
-#   ./build.sh status    live profile vs this repo's HEAD, plugin pins, ab
-#   ./build.sh deploy    HOST ONLY: git pull --ff-only into the live profile
-#   ./build.sh install   HOST ONLY: ab profile install omp (+ ab image build)
-#   ./build.sh all       check, then deploy, then install
-#
-# Exit status:
-#   0  success
-#   1  problems found, or a command failed
-#   2  a HOST ONLY command was refused (running inside an agentbox session)
-#   3  the `ab` CLI is missing a command this script needs
-#
-set -euo pipefail
+# Exit status: 0 ok, 1 check failed, 2 refused (wrong place / usage), 3 ab cannot do it.
 
-REPO_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
-# The live profile is a git clone of this repo that agentbox reads. Overridable
-# for tests only; Tim's real path is the default.
-LIVE_DIR="${AGENTBOX_OMP_PROFILE:-$HOME/.config/agentbox/omp/profile}"
-PROFILE_NAME="omp"
+set -uo pipefail
 
-EXIT_PROBLEMS=1
-EXIT_REFUSED=2
-EXIT_NO_AB=3
+REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
+PROFILE="omp"
+LIVE="${AGENTBOX_OMP_PROFILE:-$HOME/.config/agentbox/omp/profile}"
 
-say() { printf '%s\n' "$*"; }
-err() { printf '%s\n' "$*" >&2; }
+say()  { printf '%s\n' "$*"; }
+warn() { printf '%s\n' "$*" >&2; }
 
-die() {
-	err "$1"
-	exit "${2:-$EXIT_PROBLEMS}"
-}
-
-# --- host-only guard --------------------------------------------------------
-
-# deploy and install touch the host's live profile and run the host's podman.
-# Inside an agentbox session neither is reachable, and the live profile is
-# deliberately outside the grant, so refuse rather than half-doing it.
+# HOST ONLY: the live profile and `ab` live on the host, not in a session sandbox.
 require_host() {
-	local what="$1"
-	local -a reasons=()
-	[[ -n "${AGENTBOX_SESSION:-}" ]] && reasons+=("AGENTBOX_SESSION is set")
-	[[ -e /run/agentbox ]] && reasons+=("/run/agentbox exists")
-	if ((${#reasons[@]} > 0)); then
-		local joined
-		joined="$(
-			IFS=', '
-			printf '%s' "${reasons[*]}"
-		)"
-		err "refusing: '$what' is host only, and this looks like an agentbox session ($joined)."
-		err "The live profile at $LIVE_DIR is outside the grant on purpose."
-		err "Run '$0 $what' from a host shell instead."
-		exit "$EXIT_REFUSED"
-	fi
+  local what="$1"
+  if [[ -n "${AGENTBOX_SESSION:-}" || -e /run/agentbox ]]; then
+    warn "build.sh $what: refusing to run inside an agentbox sandbox; this is host only."
+    warn "  Run it from a terminal on the host, in a checkout of this repo."
+    exit 2
+  fi
 }
 
-# --- ab availability --------------------------------------------------------
-
-AB_HELP=""
-AB_HELP_LOADED=0
-
-# Collect `ab`'s help text once. Only --help/help forms are run: never a bare
-# subcommand, which could do real work.
-load_ab_help() {
-	((AB_HELP_LOADED)) && return 0
-	AB_HELP_LOADED=1
-	command -v ab >/dev/null 2>&1 || return 0
-	AB_HELP="$(
-		{
-			ab --help 2>&1 || true
-			ab help 2>&1 || true
-			ab profile --help 2>&1 || true
-			ab image --help 2>&1 || true
-		} || true
-	)"
+# Where a fresh clone of this repo should come from.
+clone_source() {
+  local origin
+  origin="$(git -C "$REPO" remote get-url origin 2>/dev/null)"
+  if [[ -n "$origin" ]]; then printf '%s\n' "$origin"; else printf '%s\n' "$REPO"; fi
 }
 
-# Heuristic: does ab's help text mention this subcommand word? `ab` is still
-# being built, so this only tells us whether the command is advertised.
-ab_mentions() {
-	load_ab_help
-	[[ -n "$AB_HELP" ]] || return 1
-	grep -qE "(^|[^[:alnum:]_-])$1([^[:alnum:]_-]|$)" <<<"$AB_HELP"
+ab_has() {  # ab_has "profile install" -> 0 if that subcommand exists
+  command -v ab >/dev/null 2>&1 || return 1
+  # shellcheck disable=SC2086
+  ab $1 --help >/dev/null 2>&1
 }
 
-ab_ready() {
-	command -v ab >/dev/null 2>&1
-}
-
-# --- live-profile identity --------------------------------------------------
-
-root_commit() { git -C "$1" rev-list --max-parents=0 HEAD 2>/dev/null | tail -1; }
-
-print_migration() {
-	local origin stamp
-	origin="$(git -C "$REPO_DIR" remote get-url origin 2>/dev/null || true)"
-	[[ -n "$origin" ]] || origin="$REPO_DIR"
-	stamp="$(date +%Y%m%d%H%M%S)"
-	err ""
-	err "One-time migration, on the host, from a shell you trust:"
-	err ""
-	err "  mv \"$LIVE_DIR\" \"$LIVE_DIR.bak.$stamp\""
-	err "  git clone $origin \"$LIVE_DIR\""
-	err ""
-	err "Then copy back, by hand, anything in $LIVE_DIR.bak.$stamp that you still"
-	err "need and that this repo does not already carry, and delete the backup."
-	err "After that: $0 deploy && $0 install"
-}
-
-# --- commands ---------------------------------------------------------------
+# --- check -----------------------------------------------------------------
 
 cmd_check() {
-	command -v python3 >/dev/null 2>&1 || die "python3 is required for '$0 check'"
-	python3 "$REPO_DIR/tools/check.py" --root "$REPO_DIR"
+  say "== check: $REPO"
+  python3 "$REPO/tools/check.py" --root "$REPO"
+  local rc=$?
+  if (( rc == 0 )); then say "check: ok"; else say "check: failed"; fi
+  return $rc
+}
+
+# --- status ----------------------------------------------------------------
+
+# True if $LIVE is missing or an empty directory: deploy may clone into it.
+live_is_absent() {
+  [[ ! -e "$LIVE" ]] && return 0
+  [[ -d "$LIVE" && -z "$(ls -A -- "$LIVE" 2>/dev/null)" ]]
+}
+
+# Is $LIVE a clean clone of this repo? Sets REASON on failure.
+REASON=""
+live_is_clean_clone() {
+  REASON=""
+  if live_is_absent; then
+    REASON="does not exist"
+    return 1
+  fi
+  if ! git -C "$LIVE" rev-parse --git-dir >/dev/null 2>&1; then
+    REASON="is not a git repository"
+    return 1
+  fi
+  local src origin
+  src="$(clone_source)"
+  origin="$(git -C "$LIVE" remote get-url origin 2>/dev/null)"
+  if [[ -z "$origin" ]]; then
+    REASON="has no origin remote"
+    return 1
+  fi
+  if [[ "$origin" != "$src" ]]; then
+    REASON="has origin $origin, expected $src"
+    return 1
+  fi
+  if [[ -n "$(git -C "$LIVE" status --porcelain 2>/dev/null)" ]]; then
+    REASON="has uncommitted local changes"
+    return 1
+  fi
+  return 0
+}
+
+print_migration() {
+  say ""
+  say "One-time migration (run on the host, then ./build.sh deploy):"
+  say "  mv $LIVE ${LIVE}.pre-repo"
+  say "  git clone $(clone_source) $LIVE"
+  say ""
+  say "Keep profile.pre-repo until you have compared it against this repo; delete it then."
 }
 
 cmd_status() {
-	local repo_head repo_root
-	repo_head="$(git -C "$REPO_DIR" rev-parse HEAD 2>/dev/null || echo "(no commits)")"
-	repo_root="$(root_commit "$REPO_DIR")"
-	say "repo:          $REPO_DIR"
-	say "  HEAD:        $repo_head"
-	if [[ -n "$(git -C "$REPO_DIR" status --porcelain 2>/dev/null)" ]]; then
-		say "  tree:        dirty (uncommitted changes are not deployed)"
-	else
-		say "  tree:        clean"
-	fi
+  local head live_head
+  head="$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo '(no commits)')"
+  say "repo:  $REPO"
+  say "  HEAD $head"
 
-	say ""
-	say "live profile:  $LIVE_DIR"
-	if [[ ! -d "$LIVE_DIR" ]]; then
-		say "  state:       absent (not installed)"
-	elif ! git -C "$LIVE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-		say "  state:       present but not a git clone — deploy will refuse"
-	else
-		local live_head live_root live_branch
-		live_head="$(git -C "$LIVE_DIR" rev-parse HEAD 2>/dev/null || echo "(no commits)")"
-		live_root="$(root_commit "$LIVE_DIR")"
-		live_branch="$(git -C "$LIVE_DIR" rev-parse --abbrev-ref HEAD 2>/dev/null || echo "?")"
-		say "  HEAD:        $live_head"
-		say "  branch:      $live_branch"
-		if [[ -n "$(git -C "$LIVE_DIR" status --porcelain 2>/dev/null)" ]]; then
-			say "  tree:        dirty — deploy will refuse"
-		else
-			say "  tree:        clean"
-		fi
-		if [[ -n "$repo_root" && "$live_root" != "$repo_root" ]]; then
-			say "  state:       a different repository — deploy will refuse"
-		elif [[ "$live_head" == "$repo_head" ]]; then
-			say "  state:       at this repo's HEAD"
-		else
-			local behind
-			behind="$(git -C "$REPO_DIR" rev-list --count "$live_head..$repo_head" 2>/dev/null || echo "?")"
-			say "  state:       behind this repo by $behind commit(s) — run '$0 deploy'"
-		fi
-	fi
+  say "live:  $LIVE"
+  if live_is_clean_clone; then
+    live_head="$(git -C "$LIVE" rev-parse HEAD)"
+    say "  HEAD $live_head"
+    if [[ "$live_head" == "$head" ]]; then
+      say "  up to date with this repo"
+    elif git -C "$REPO" merge-base --is-ancestor "$live_head" "$head" 2>/dev/null; then
+      local behind
+      behind="$(git -C "$REPO" rev-list --count "$live_head..$head" 2>/dev/null)"
+      say "  $behind commit(s) behind this repo; ./build.sh deploy will fast-forward it"
+    else
+      say "  diverged from this repo (not an ancestor of HEAD)"
+    fi
+  elif live_is_absent; then
+    say "  does not exist yet; ./build.sh deploy will clone this repo there"
+  else
+    say "  not deployable: $REASON"
+  fi
 
-	say ""
-	say "plugin pins:"
-	if command -v python3 >/dev/null 2>&1; then
-		python3 - "$REPO_DIR/plugins.toml" <<'PY'
-import sys, tomllib
-from pathlib import Path
-path = Path(sys.argv[1])
-if not path.is_file():
-    print("  plugins.toml: absent")
-    raise SystemExit(0)
-try:
-    data = tomllib.loads(path.read_text())
-except Exception as exc:
-    print(f"  plugins.toml: does not parse ({exc})")
-    raise SystemExit(0)
-entries = data.get("plugin") or []
-if not entries:
-    print("  (none declared)")
-for entry in entries:
-    print(f"  {entry.get('id', '?'):<24} {entry.get('ref', '?')}  <- {entry.get('source', '?')}")
-PY
-	else
-		say "  (python3 missing; cannot read plugins.toml)"
-	fi
+  say "plugins:"
+  if [[ -f "$REPO/plugins.toml" ]]; then
+    python3 "$REPO/tools/check.py" --list-plugins --root "$REPO" \
+      | while read -r id source ref; do
+          say "  $id  $source  ${ref:0:12}"
+        done
+  else
+    say "  (no plugins.toml)"
+  fi
 
-	say ""
-	say "ab:"
-	if ! ab_ready; then
-		say "  ab:                  not on PATH"
-	else
-		say "  ab:                  $(command -v ab)"
-		for sub in "profile" "install" "image" "build"; do
-			if ab_mentions "$sub"; then
-				say "  mentions '$sub':     yes"
-			else
-				say "  mentions '$sub':     no — '$0 install' will exit $EXIT_NO_AB"
-			fi
-		done
-	fi
+  say "ab:"
+  if ! command -v ab >/dev/null 2>&1; then
+    say "  not on PATH (expected inside a session sandbox; needed on the host)"
+  else
+    say "  $(command -v ab)"
+    if ab_has "profile install"; then say "  profile install: available"
+    else say "  profile install: NOT available"; fi
+    if ab_has "image build"; then say "  image build: available"
+    else say "  image build: NOT available"; fi
+  fi
+  return 0
+}
+
+# --- deploy ----------------------------------------------------------------
+
+# First-time setup: clone this repo to $LIVE, creating its parent directories.
+bootstrap_live() {
+  local src
+  src="$(clone_source)"
+  say "== deploy: $LIVE does not exist; first-time setup"
+  mkdir -p -- "$(dirname -- "$LIVE")" || return 1
+  say "== deploy: git clone $src $LIVE"
+  git clone -- "$src" "$LIVE" || return 1
+  say "deploy: live profile created at $(git -C "$LIVE" rev-parse --short HEAD)"
+  say "deploy: next, ./build.sh install to install plugins and build the image"
+  return 0
 }
 
 cmd_deploy() {
-	require_host deploy
-
-	if [[ ! -d "$LIVE_DIR" ]]; then
-		err "refusing: $LIVE_DIR does not exist, so there is nothing to fast-forward."
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-	if ! git -C "$LIVE_DIR" rev-parse --is-inside-work-tree >/dev/null 2>&1; then
-		err "refusing: $LIVE_DIR is not a git work tree."
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-
-	local repo_root live_root
-	repo_root="$(root_commit "$REPO_DIR")"
-	live_root="$(root_commit "$LIVE_DIR")"
-	if [[ -z "$repo_root" || "$live_root" != "$repo_root" ]]; then
-		err "refusing: $LIVE_DIR is a clone of a different repository (root commit ${live_root:-none} != $repo_root)."
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-	if ! git -C "$LIVE_DIR" remote get-url origin >/dev/null 2>&1; then
-		err "refusing: $LIVE_DIR has no 'origin' remote, so 'git pull --ff-only' has nothing to pull from."
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-	if [[ -n "$(git -C "$LIVE_DIR" status --porcelain)" ]]; then
-		err "refusing: $LIVE_DIR is not clean. Local edits there would be lost; this repo is the source."
-		git -C "$LIVE_DIR" status --short >&2
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-	if [[ "$(git -C "$LIVE_DIR" rev-parse --abbrev-ref HEAD)" == "HEAD" ]]; then
-		err "refusing: $LIVE_DIR has a detached HEAD, so there is no branch to fast-forward."
-		print_migration
-		exit "$EXIT_REFUSED"
-	fi
-
-	say "deploying to $LIVE_DIR"
-	git -C "$LIVE_DIR" pull --ff-only
-	say "live profile is now at $(git -C "$LIVE_DIR" rev-parse HEAD)"
+  require_host deploy
+  if live_is_absent; then
+    bootstrap_live
+    return $?
+  fi
+  if ! live_is_clean_clone; then
+    warn "build.sh deploy: refusing to touch $LIVE: it $REASON."
+    warn "  deploy only fast-forwards a clean clone of this repo."
+    print_migration >&2
+    exit 2
+  fi
+  say "== deploy: git -C $LIVE pull --ff-only"
+  git -C "$LIVE" pull --ff-only || return 1
+  say "deploy: live profile is now at $(git -C "$LIVE" rev-parse --short HEAD)"
+  say "deploy: new sessions pick it up; existing sessions keep the old settings.json"
+  return 0
 }
+
+# --- install ---------------------------------------------------------------
 
 cmd_install() {
-	require_host install
+  require_host install
+  if ! command -v ab >/dev/null 2>&1; then
+    warn "build.sh install: ab is not on PATH; cannot install plugins or build the image."
+    exit 3
+  fi
+  if ! ab_has "profile install"; then
+    warn "build.sh install: this ab has no 'profile install' command yet."
+    exit 3
+  fi
+  say "== install: ab profile install $PROFILE"
+  ab profile install "$PROFILE" || return 1
 
-	ab_ready || die "ab is not on PATH; cannot install the profile." "$EXIT_NO_AB"
-	ab_mentions profile || die "this ab has no 'profile' command (need 'ab profile install $PROFILE_NAME')." "$EXIT_NO_AB"
-	ab_mentions install || die "this ab's profile command has no 'install' (need 'ab profile install $PROFILE_NAME')." "$EXIT_NO_AB"
-
-	say "ab profile install $PROFILE_NAME"
-	ab profile install "$PROFILE_NAME"
-
-	if [[ -f "$REPO_DIR/Containerfile" ]]; then
-		ab_mentions image || die "this ab has no 'image' command (need 'ab image build $PROFILE_NAME' for the Containerfile)." "$EXIT_NO_AB"
-		ab_mentions build || die "this ab's image command has no 'build' (need 'ab image build $PROFILE_NAME')." "$EXIT_NO_AB"
-		say "ab image build $PROFILE_NAME"
-		ab image build "$PROFILE_NAME"
-	fi
+  if [[ -f "$REPO/Containerfile" ]]; then
+    if ! ab_has "image build"; then
+      warn "build.sh install: Containerfile present but this ab has no 'image build' command yet."
+      exit 3
+    fi
+    say "== install: ab image build $PROFILE"
+    ab image build "$PROFILE" || return 1
+  else
+    say "install: no Containerfile, skipping image build"
+  fi
+  say "install: ok"
+  return 0
 }
 
+# --- all -------------------------------------------------------------------
+
 cmd_all() {
-	cmd_check
-	cmd_deploy
-	cmd_install
+  cmd_check   || return $?
+  cmd_deploy  || return $?
+  cmd_install || return $?
+  say "all: ok"
+  return 0
 }
 
 usage() {
-	sed -n '3,15p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
+  sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
 
-main() {
-	local command="${1:-}"
-	case "$command" in
-	check) cmd_check ;;
-	status) cmd_status ;;
-	deploy) cmd_deploy ;;
-	install) cmd_install ;;
-	all) cmd_all ;;
-	-h | --help | help | "") usage ;;
-	*)
-		err "unknown command: $command"
-		usage >&2
-		exit "$EXIT_PROBLEMS"
-		;;
-	esac
-}
-
-main "$@"
+case "${1:-}" in
+  check)   cmd_check ;;
+  status)  cmd_status ;;
+  deploy)  cmd_deploy ;;
+  install) cmd_install ;;
+  all)     cmd_all ;;
+  ""|-h|--help|help) usage; [[ -z "${1:-}" ]] && exit 2 || exit 0 ;;
+  *) warn "build.sh: unknown command '${1}'"; usage >&2; exit 2 ;;
+esac

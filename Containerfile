@@ -5,8 +5,8 @@
 # `FROM ${BASE}` and must not set USER, ENTRYPOINT or CMD — the base image owns
 # all three. `ab run --no-profile` skips this layer.
 #
-# Per PARITY.md this file holds neovim 0.10.4 with a sha256 check, EDITOR and
-# VISUAL, and nothing else. It extracts into /usr/local so nvim lands on the
+# As in the sibling Claude profile repo, this file holds neovim 0.10.4 with a
+# sha256 check, EDITOR and VISUAL, and nothing else. It extracts into /usr/local so nvim lands on the
 # default PATH without an ENV PATH line.
 #
 # EDITOR/VISUAL are what OMP's external-editor key (`app.editor.external`,

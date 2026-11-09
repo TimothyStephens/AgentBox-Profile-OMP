@@ -8,11 +8,10 @@
 # mutation, and asserts that check passes with no output, fails with a specific
 # message, or warns with a specific message.
 #
-# Case names are the parity surface. Per PARITY.md every shared rule has a pass
-# case and a fail case, and those names must be identical in
-# agentbox-profile-claude. So:
+# Every rule shared with agentbox-profile-claude has a pass case and a fail
+# case here, under the same name as in that repo. So:
 #
-#   shared: ...   a rule PARITY.md calls shared. Same name in both repos.
+#   shared: ...   a rule both profile repos enforce. Same name in both.
 #   omp:    ...   a rule this harness forces. Has no sibling.
 #
 # Exits 0 only if every case passes.
@@ -55,7 +54,6 @@ make_good() {
 
 	printf '# Working with Tim\n\nShort enough.\n' >"$fx/AGENTS.md"
 	printf '# profile\n' >"$fx/README.md"
-	printf '# parity\n' >"$fx/PARITY.md"
 	printf '# third party\n' >"$fx/THIRD_PARTY.md"
 	printf '#!/usr/bin/env bash\ntrue\n' >"$fx/build.sh"
 	chmod +x "$fx/build.sh"
@@ -179,7 +177,7 @@ $out"
 }
 
 # ===========================================================================
-# shared rules (PARITY.md). Same names in agentbox-profile-claude.
+# shared rules. Same names in agentbox-profile-claude.
 # ===========================================================================
 
 # --- only the documented top-level entries ---------------------------------
@@ -570,36 +568,26 @@ $out"
 	fi
 }
 
-check_repo() {
-	local out rc
-	out="$("$BUILD" check 2>&1)"
-	rc=$?
-	if [[ $rc -eq 0 && -z "$out" ]]; then
-		pass "shared: build.sh check exits 0 on this repository — pass"
-	else
-		fail "shared: build.sh check exits 0 on this repository — pass" "exit $rc:
-$out"
-	fi
-}
-check_repo
+exit_code_case "shared: build.sh check exits 0 on this repository — pass" 0 \
+	"check: ok" \
+	"$BUILD" check
 
-# build.sh check execs the checker, so the checker's exit 1 is build.sh's.
+# build.sh check returns the checker's exit status, so the checker's 1 is build.sh's.
 exit_code_case "shared: build.sh check exits 1 when check fails — fail" 1 \
 	"unexpected top-level entry" \
 	env "BROKEN=1" bash -c 'fx="$1"; mkdir -p "$fx" && cp -a "$2"/. "$fx"/ && printf "x\n" > "$fx/notes.md" && python3 "$fx/tools/check.py" --root "$fx"' _ "$WORK/repo-copy" "$REPO_DIR"
 
-status_runs() {
-	local out rc
-	out="$("$BUILD" status 2>&1)"
-	rc=$?
-	if [[ $rc -eq 0 ]] && grep -qF "plugin pins:" <<<"$out"; then
-		pass "shared: build.sh status exits 0 — pass"
-	else
-		fail "shared: build.sh status exits 0 — pass" "exit $rc:
-$out"
-	fi
-}
-status_runs
+exit_code_case "shared: build.sh status exits 0 — pass" 0 \
+	"plugins:" \
+	"$BUILD" status
+
+exit_code_case "shared: build.sh status reports a missing live profile as clonable — pass" 0 \
+	"does not exist yet; ./build.sh deploy will clone" \
+	env AGENTBOX_OMP_PROFILE="$WORK/no-such-profile" "$BUILD" status
+
+exit_code_case "shared: build.sh exits 2 on an unknown command — fail" 2 \
+	"unknown command" \
+	"$BUILD" frobnicate
 
 # NOT COVERED: exit 3 (ab lacks the command). install refuses with exit 2
 # before it looks for ab whenever /run/agentbox exists, so this path is only

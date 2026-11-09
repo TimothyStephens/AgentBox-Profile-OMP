@@ -33,7 +33,6 @@ from pathlib import Path
 ALLOWED_TOP_LEVEL = {
     "AGENTS.md",
     "README.md",
-    "PARITY.md",
     "THIRD_PARTY.md",
     # The documentation for each load directory, one file per directory. It
     # cannot live inside the directory it documents: those are mounted onto
@@ -55,9 +54,9 @@ ALLOWED_TOP_LEVEL = {
     # Gitignored scratch directory: EGM artifacts (.dev/docs, see AGENTS.md)
     # and show-me's HTML files (.dev/show-me). Allowed at the top level so a
     # run that produced artifacts is not failed for it, as in the Claude
-    # profile repo. PARITY.md: .dev/ is skipped by the symlink and size rules
-    # because it is gitignored and never deployed, but the secret-name rule
-    # still applies inside it.
+    # profile repo. .dev/ is skipped by the symlink and size rules because it
+    # is gitignored and never deployed, but the secret-name rule still applies
+    # inside it.
     ".dev",
 }
 
@@ -91,8 +90,9 @@ KNOWN_SKILL_KEYS = {
     "enabled",
 }
 
-# The directories agentbox mounts onto an OMP discovery path. Per PARITY.md
-# they hold only loadable items, and all but skills/ are optional.
+# The directories agentbox mounts onto an OMP discovery path. They hold only
+# loadable items, and all but skills/ are optional (same rule as the Claude
+# profile repo).
 LOAD_DIRECTORIES = ("skills", "rules", "prompts", "agents", "commands")
 
 # Documentation that must not sit in a load directory, at any depth.
@@ -320,7 +320,7 @@ def listdir_sorted(path: Path) -> list[Path]:
 
 
 def check_load_directories(root: Path, rep: Report) -> None:
-    """Per PARITY.md: load directories hold only loadable items — no README*
+    """Load directories hold only loadable items — no README*
     file at any depth (case-insensitive) — and all but skills/ are optional.
 
     agentbox mounts these directories straight onto a discovery path, so OMP
@@ -684,7 +684,7 @@ def check_containerfile(root: Path, rep: Report) -> None:
 
 
 def check_hygiene(root: Path, rep: Report) -> None:
-    """Per PARITY.md: no symlinks (they would not survive a read-only mount and
+    """No symlinks (they would not survive a read-only mount and
     can escape the profile) and nothing over 1 MB in tracked paths; a name
     matching .env*, *.pem or id_* is an error anywhere, .dev/ included; .dev/ is
     otherwise skipped, because it is gitignored and never deployed."""
@@ -733,6 +733,26 @@ def check_hygiene(root: Path, rep: Report) -> None:
 # --- entry point ------------------------------------------------------------
 
 
+def list_plugins(root: Path) -> int:
+    """`build.sh status` reads this: one 'id source ref' line per [[plugin]] table."""
+    path = root / "plugins.toml"
+    if not path.is_file():
+        return 0
+    try:
+        with path.open("rb") as handle:
+            data = tomllib.load(handle)
+    except (OSError, tomllib.TOMLDecodeError) as exc:
+        print(f"plugins.toml: does not parse as TOML: {exc}", file=sys.stderr)
+        return 1
+    entries = data.get("plugin", [])
+    if not isinstance(entries, list):
+        return 0
+    for entry in entries:
+        if isinstance(entry, dict):
+            print(entry.get("id", "?"), entry.get("source", "?"), entry.get("ref", "?"))
+    return 0
+
+
 def main(argv: list[str] | None = None) -> int:
     parser = argparse.ArgumentParser(description=__doc__, formatter_class=argparse.RawDescriptionHelpFormatter)
     parser.add_argument(
@@ -740,12 +760,20 @@ def main(argv: list[str] | None = None) -> int:
         default=str(Path(__file__).resolve().parent.parent),
         help="profile directory to check (default: this repository)",
     )
+    parser.add_argument(
+        "--list-plugins",
+        action="store_true",
+        help="print 'id source ref' for each declared plugin instead of checking",
+    )
     args = parser.parse_args(argv)
 
     root = Path(args.root).resolve()
     if not root.is_dir():
         print(f"{args.root}: not a directory", file=sys.stderr)
         return 1
+
+    if args.list_plugins:
+        return list_plugins(root)
 
     rep = Report()
     check_top_level(root, rep)

@@ -3,7 +3,7 @@
 Everything vendored into this profile. Update this file in the same commit that
 adds, moves or edits vendored content.
 
-Per [PARITY.md](PARITY.md) every entry carries the same six fields: **name**,
+As in the sibling Claude profile repo, every entry carries the same six fields: **name**,
 **source URL**, **path**, **commit**, **license**, **local changes**.
 
 Provenance was verified by fetching each upstream file at its pinned commit and
