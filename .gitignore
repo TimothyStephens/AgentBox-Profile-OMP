@@ -6,3 +6,8 @@
 # Python bytecode from tools/check.py
 __pycache__/
 *.pyc
+
+# Seeds are host-local by choice: ~/.config/agentbox/omp/models.yml and friends are personal
+# config, so a copy must not land in this repo by accident. seed/ still works as a staging
+# directory for ./build.sh deploy on this host; ./build.sh status reports the live files.
+seed/

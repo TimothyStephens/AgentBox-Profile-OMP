@@ -38,8 +38,10 @@ of each lives: `./build.sh deploy` installs any whose live copy is missing (and
 never overwrites one that exists), `./build.sh status` reports each file as
 live = seed, differing, not live yet, live only, or MISSING, and `check` refuses
 a credential in any of them (`apiKey` in `models.yml` outright, as agentbox
-does). Keys go through `ab keys set <provider>`, never into a seed. To start
-`seed/` from what you have: `cp ~/.config/agentbox/omp/models.yml seed/`.
+does). Keys go through `ab keys set <provider>`, never into a seed. In this repo `seed/` is
+**gitignored**: the live files are personal config and stay on the host, where
+`status` reports them as "live only". A `seed/` you create locally still feeds
+`deploy`; it just never gets committed.
 
 Auto-learn writes only to `~/.omp/agent/managed-skills`, which agentbox makes
 per-session and drains to a review inbox at teardown. Nothing here may depend
