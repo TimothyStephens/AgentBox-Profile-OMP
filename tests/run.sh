@@ -535,6 +535,28 @@ run_case "omp: build.sh is executable — fail" warn \
 	"chmod -x build.sh"
 
 # ===========================================================================
+# seed/ (shared): keyless copies of what agentbox reads from ~/.config/agentbox/<agent>/
+# ===========================================================================
+
+run_case "shared: seed/ holds keyless config — pass" ok "" \
+	"mkdir seed && printf 'providers:\n  llama-cpp:\n    baseUrl: http://10.0.0.2:8080/v1\n' > seed/models.yml"
+
+run_case "shared: seed/ with a subdirectory — fail" fail \
+	"seed/ holds files only" \
+	"mkdir -p seed/sub"
+
+run_case "shared: seed/ file holding a credential — fail" fail \
+	"looks like a credential" \
+	"mkdir seed && printf 'mcp:\n  token: ghp_realvalue\n' > seed/config.yml"
+
+run_case "shared: seed/ models.yml with any apiKey — fail" fail \
+	"apiKey\` is refused in the model seed" \
+	"mkdir seed && printf 'providers:\n  openai:\n    apiKey: none\n' > seed/models.yml"
+
+run_case "shared: seed/ env reference is not a credential — pass" ok "" \
+	"mkdir seed && printf '{\"env\": {\"TOKEN\": \"\${X}\"}}\n' > seed/mcp.json"
+
+# ===========================================================================
 # build.sh exit codes (shared)
 # ===========================================================================
 
@@ -584,6 +606,14 @@ exit_code_case "shared: build.sh status exits 0 — pass" 0 \
 exit_code_case "shared: build.sh status reports a missing live profile as clonable — pass" 0 \
 	"does not exist yet; ./build.sh deploy will clone" \
 	env AGENTBOX_OMP_PROFILE="$WORK/no-such-profile" "$BUILD" status
+
+exit_code_case "shared: build.sh status lists the seeds — pass" 0 \
+	"seeds:" \
+	env AGENTBOX_OMP_PROFILE="$WORK/no-such/profile" "$BUILD" status
+
+exit_code_case "omp: build.sh status names a seed agentbox expects and nobody has — pass" 0 \
+	"models.yml: MISSING" \
+	env AGENTBOX_OMP_PROFILE="$WORK/no-such/profile" "$BUILD" status
 
 exit_code_case "shared: build.sh exits 2 on an unknown command — fail" 2 \
 	"unknown command" \

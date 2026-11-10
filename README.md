@@ -23,13 +23,23 @@ that clone except `./build.sh deploy`, run on the host.
 | `THIRD_PARTY.md` | — | Provenance for everything vendored |
 | `docs/` | — | Format reference for each load directory, one file per directory, plus `decisions.md` |
 | `reference/omp/` | — | OMP's own format docs, the spec this repo cites |
+| `seed/` | copied to `~/.config/agentbox/omp/` | Keyless copies of what agentbox reads from there: `models.yml`, `config.yml`, `mcp.json`, `mags-codedev.yaml`. `deploy` installs a missing one and never overwrites; `status` reports each |
 
 Those five directories are mounted read-only into **every OMP session in every
 project**. `ab run --no-profile` skips all of it, plugins and the image layer
 included.
 
-OMP settings (`config.yml`), `mcp.json` and `mags-codedev.yaml` live in
-`~/.config/agentbox/omp/`, outside this repo. Do not add them here.
+agentbox reads OMP's own settings from `~/.config/agentbox/omp/`, beside the
+live profile, not from the profile: `models.yml` (the keyless model seed, from
+which each session's `models.yml` is generated for the providers that have a key
+file), `config.yml`, `mcp.json` and `mags-codedev.yaml`. A session without them
+runs on OMP's defaults and says so. `seed/` in this repo is where a keyless copy
+of each lives: `./build.sh deploy` installs any whose live copy is missing (and
+never overwrites one that exists), `./build.sh status` reports each file as
+live = seed, differing, not live yet, live only, or MISSING, and `check` refuses
+a credential in any of them (`apiKey` in `models.yml` outright, as agentbox
+does). Keys go through `ab keys set <provider>`, never into a seed. To start
+`seed/` from what you have: `cp ~/.config/agentbox/omp/models.yml seed/`.
 
 Auto-learn writes only to `~/.omp/agent/managed-skills`, which agentbox makes
 per-session and drains to a review inbox at teardown. Nothing here may depend
@@ -63,7 +73,7 @@ at least one error. What it enforces is listed in
 [`tools/check.py`](tools/check.py); every rule has a test.
 
 ```sh
-./tests/run.sh      # 95 cases: the rules, the warnings, the host-only refusals
+./tests/run.sh      # 102 cases: the rules, the warnings, the host-only refusals
 ```
 
 Run both. A green `check` with a red `tests/run.sh` means the checker itself

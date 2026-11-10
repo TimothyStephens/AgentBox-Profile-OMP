@@ -3,7 +3,7 @@
 #
 #   ./build.sh check     offline validation of this repo          (anywhere)
 #   ./build.sh status    live profile vs this repo, plugin pins   (anywhere)
-#   ./build.sh deploy    clone the live profile, or fast-forward it (host only)
+#   ./build.sh deploy    clone or fast-forward the live profile; install missing seeds (host only)
 #   ./build.sh install   ab profile install + ab image build      (host only)
 #   ./build.sh all       check, deploy, install; stop on failure  (host only)
 #
@@ -14,6 +14,12 @@ set -uo pipefail
 REPO="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 PROFILE="omp"
 LIVE="${AGENTBOX_OMP_PROFILE:-$HOME/.config/agentbox/omp/profile}"
+# agentbox also reads a few files from the directory ABOVE the live profile (~/.config/agentbox/<agent>/),
+# never from the profile itself: keyless seeds and personal config a session mounts read-only. SEEDS names
+# the ones agentbox looks for; seed/<name> in this repo is a copy that `deploy` installs when the live one
+# is missing (never over it), and `status` reports each. Keys never go in them: `ab keys set <provider>`.
+SEEDS="models.yml config.yml mcp.json mags-codedev.yaml"
+SEED_DIR="$REPO/seed"
 
 say()  { printf '%s\n' "$*"; }
 warn() { printf '%s\n' "$*" >&2; }
@@ -133,6 +139,9 @@ cmd_status() {
     say "  (no plugins.toml)"
   fi
 
+  say "seeds: $(seed_dst)"
+  seed_report
+
   say "ab:"
   if ! command -v ab >/dev/null 2>&1; then
     say "  not on PATH (expected inside a session sandbox; needed on the host)"
@@ -146,6 +155,70 @@ cmd_status() {
   return 0
 }
 
+# --- seeds -----------------------------------------------------------------
+
+# The directory agentbox reads the seeds from: the one above the live profile.
+seed_dst() { dirname -- "$LIVE"; }
+
+# One line per seed: the repo's seed/<name> against the live copy. Names come from SEEDS (what agentbox looks
+# for) plus whatever seed/ holds, so a file in only one place is still reported.
+seed_report() {
+  local dst names=() n f
+  dst="$(seed_dst)"
+  for n in $SEEDS; do names+=("$n"); done
+  if [[ -d "$SEED_DIR" ]]; then
+    for f in "$SEED_DIR"/*; do
+      [[ -f "$f" ]] || continue
+      n="$(basename -- "$f")"
+      case " ${names[*]-} " in *" $n "*) ;; *) names+=("$n") ;; esac
+    done
+  fi
+  if (( ${#names[@]} == 0 )); then
+    say "  (none expected for this profile)"
+    return 0
+  fi
+  for n in "${names[@]}"; do
+    local repo="$SEED_DIR/$n" live="$dst/$n" state
+    if [[ -f "$repo" && -f "$live" ]]; then
+      if cmp -s -- "$repo" "$live"; then
+        state="live = seed/$n"
+      else
+        state="live DIFFERS from seed/$n (deploy never overwrites; copy whichever is right over the other)"
+      fi
+    elif [[ -f "$repo" ]]; then
+      state="not live yet; ./build.sh deploy will install seed/$n"
+    elif [[ -f "$live" ]]; then
+      state="live only, not in this repo (cp $live $SEED_DIR/ to keep it here)"
+    else
+      state="MISSING: neither $live nor seed/$n; sessions run on $PROFILE's own defaults"
+    fi
+    say "  $n: $state"
+  done
+}
+
+# deploy: install each seed/<name> whose live copy is missing. Never over an existing one -- it may hold a
+# change made on the host -- and status says when the two differ.
+seed_install() {
+  [[ -d "$SEED_DIR" ]] || return 0
+  local dst f n
+  dst="$(seed_dst)"
+  for f in "$SEED_DIR"/*; do
+    [[ -f "$f" ]] || continue
+    n="$(basename -- "$f")"
+    [[ -e "$dst/$n" ]] && continue
+    mkdir -p -- "$dst" || return 1
+    cp -- "$f" "$dst/$n" && chmod 600 -- "$dst/$n" || return 1
+    say "deploy: installed seed/$n -> $dst/$n"
+  done
+  return 0
+}
+
+deploy_seeds() {
+  seed_install || return 1
+  say "seeds: $(seed_dst)"
+  seed_report
+}
+
 # --- deploy ----------------------------------------------------------------
 
 # First-time setup: clone this repo to $LIVE, creating its parent directories.
@@ -157,6 +230,7 @@ bootstrap_live() {
   say "== deploy: git clone $src $LIVE"
   git clone -- "$src" "$LIVE" || return 1
   say "deploy: live profile created at $(git -C "$LIVE" rev-parse --short HEAD)"
+  deploy_seeds || return 1
   say "deploy: next, ./build.sh install to install plugins and build the image"
   return 0
 }
@@ -176,6 +250,7 @@ cmd_deploy() {
   say "== deploy: git -C $LIVE pull --ff-only"
   git -C "$LIVE" pull --ff-only || return 1
   say "deploy: live profile is now at $(git -C "$LIVE" rev-parse --short HEAD)"
+  deploy_seeds || return 1
   say "deploy: new sessions pick it up; existing sessions keep the old settings.json"
   return 0
 }

@@ -1,5 +1,24 @@
 # Decisions
 
+## 2026-11-10: `seed/` — keyless config agentbox reads beside the live profile, installed by deploy
+
+- What: a `seed/` directory in the profile repo. `./build.sh deploy` copies each `seed/<name>` to
+  `~/.config/agentbox/<agent>/<name>` when no live copy exists, mode 0600, and never overwrites one;
+  `./build.sh status` prints a `seeds:` block naming every file agentbox looks for (`SEEDS` in
+  `build.sh`: for OMP `models.yml config.yml mcp.json mags-codedev.yaml`, for Claude none) plus
+  whatever `seed/` holds, each as `live = seed`, `DIFFERS`, `not live yet`, `live only` or
+  `MISSING`. `check` allows `seed/`, requires flat files, and refuses a credential-shaped line
+  (`apiKey`, `token`, `secret`, `password`, `authorization` with a real value; `apiKey` in
+  `models.yml` with any value, which is agentbox's own rule). `build.sh` is still the same script in
+  both repos; its per-profile lines are now the profile name, the live path and `SEEDS`.
+- Why: a session on OMP without `~/.config/agentbox/omp/models.yml` runs on defaults and only says
+  so in a warning at start; nothing in the profile's own tooling knew the file existed, and a new
+  host had to learn it from agentbox's INSTALL.md. The seeds are keyless by agentbox's design, so
+  a copy can live in the repo; `deploy` installing a missing one makes a fresh host complete, and
+  never overwriting keeps a host-side edit safe. Committing `seed/` is the default so it travels
+  with the repo; a `seed/` line in `.gitignore` makes it host-local instead, with `status` still
+  reporting it.
+
 ## 2026-11-09: PARITY.md dropped; build.sh is the same script in both profile repos
 
 - What: `PARITY.md`, the written parity contract with the sibling profile repo, was deleted from
