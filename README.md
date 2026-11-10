@@ -26,7 +26,7 @@ that clone except `./build.sh deploy`, run on the host.
 | `seed/` | copied to `~/.config/agentbox/omp/` | Keyless copies of what agentbox reads from there: `models.yml`, `config.yml`, `mcp.json`, `mags-codedev.yaml`. `deploy` installs a missing one and never overwrites; `status` reports each |
 
 Those five directories are mounted read-only into **every OMP session in every
-project**. `ab run --no-profile` skips all of it, plugins and the image layer
+project**. `ab session start --no-profile` skips all of it, plugins and the image layer
 included.
 
 agentbox reads OMP's own settings from `~/.config/agentbox/omp/`, beside the
@@ -116,7 +116,7 @@ commands, which it decides by running the subcommand with `--help`.
 ### 5. Run clean
 
 ```sh
-ab run --no-profile     # none of this repo, no plugins, no image layer
+ab session start --no-profile     # none of this repo, no plugins, no image layer
 ```
 
 Use it to tell "the profile broke it" apart from "the project broke it".

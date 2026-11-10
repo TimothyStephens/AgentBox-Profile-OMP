@@ -2,7 +2,7 @@
 # `ab profile install omp`. Nothing in this file is fetched by this repo and no
 # plugin content is vendored; see THIRD_PARTY.md.
 #
-# `ab run --no-profile` skips this file along with the rest of the profile.
+# `ab session start --no-profile` skips this file along with the rest of the profile.
 #
 # Schema (one [[plugin]] table per plugin, every key required):
 #   id           OMP plugin id, exactly "<name>@<marketplace>".
@@ -52,7 +52,7 @@
 # An unknown key or section is an ERROR, not an ignored line: a typo'd `verison` would leave an entry with
 # no version at all.
 #
-# `ab run --no-profile` skips this file with the rest of the profile.
+# `ab session start --no-profile` skips this file with the rest of the profile.
 
 # --- marketplace plugins ---------------------------------------------------------------------------
 
