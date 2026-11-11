@@ -850,7 +850,8 @@ def check_seed(root: Path, rep) -> None:
 
 
 def list_plugins(root: Path) -> int:
-    """`build.sh status` reads this: one 'id source ref' line per [[plugin]] table."""
+    """`build.sh status` reads this: one 'name source ref' line per entry of every kind, so the list is what
+    agentbox installs: [[plugin]] as 'id source sha', [[npm]] as 'name npm version', [[repo]] as 'name url sha'."""
     path = root / "plugins.toml"
     if not path.is_file():
         return 0
@@ -860,12 +861,14 @@ def list_plugins(root: Path) -> int:
     except (OSError, tomllib.TOMLDecodeError) as exc:
         print(f"plugins.toml: does not parse as TOML: {exc}", file=sys.stderr)
         return 1
-    entries = data.get("plugin", [])
-    if not isinstance(entries, list):
-        return 0
-    for entry in entries:
-        if isinstance(entry, dict):
-            print(entry.get("id", "?"), entry.get("source", "?"), entry.get("ref", "?"))
+    columns = {"plugin": ("id", "source", "ref"), "npm": ("name", None, "version"), "repo": ("name", "url", "ref")}
+    for kind, (first, second, third) in columns.items():
+        entries = data.get(kind, [])
+        if not isinstance(entries, list):
+            continue
+        for entry in entries:
+            if isinstance(entry, dict):
+                print(entry.get(first, "?"), entry.get(second, "?") if second else "npm", entry.get(third, "?"))
     return 0
 
 

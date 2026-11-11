@@ -647,6 +647,15 @@ exit_code_case "shared: build.sh status exits 0 — pass" 0 \
 	"plugins:" \
 	"$BUILD" status
 
+# status lists every kind agentbox installs, not only the marketplace ones (this repo has one of each).
+exit_code_case "omp: build.sh status lists [[npm]] entries — pass" 0 \
+	"  pi-rules  npm  0.1.1" \
+	"$BUILD" status
+
+exit_code_case "omp: build.sh status lists [[repo]] entries — pass" 0 \
+	"  mags-codedev  https://github.com/TimothyStephens/MAGS-CodeDev.git  d44fea8c5bf4" \
+	"$BUILD" status
+
 exit_code_case "shared: build.sh status reports a missing live profile as clonable — pass" 0 \
 	"does not exist yet; ./build.sh deploy will clone" \
 	env AGENTBOX_OMP_PROFILE="$WORK/no-such-profile" "$BUILD" status
