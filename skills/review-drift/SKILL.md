@@ -3,7 +3,7 @@ name: review-drift
 description: >
   Review another agent's work for scope creep and drift from a plan, from a clean context.
   Takes the baseline (a design doc, task, or plan file) and a git range. Use when the user
-  runs /review-drift, typically in a reviewer project (`ab project add --review-of`).
+  runs /review-drift, typically in a reviewer project (`ab project add <name> --reviews <builder>`).
 disable-model-invocation: true
 ---
 
@@ -31,8 +31,8 @@ The user gives you, or you ask for:
   Check each claim you rely on against the diff.
 - Do not ask the author, read their notes, or look for their transcripts. If something is
   ambiguous, report the ambiguity.
-- You may not be able to write to the tree (a reviewer's root is read-only). Do not try to
-  fix anything; report it.
+- Do not fix anything, and do not commit: report it. In an agentbox reviewer project the tree
+  is a detached clone of the builder's repository, and only `reviews/` is yours to write.
 - Tag each finding: **[Certain]** you read it in the diff or ran it; **[likely]** a strong
   inference; **Guessing** filling a gap.
 
@@ -65,3 +65,7 @@ Traced cleanly   B1, B3, ...
 ```
 
 An empty section is written as `none`. Do not pad: a short, true report is the useful one.
+
+Give the report in your reply, and also save it as `reviews/<YYYY-MM-DD>-<topic>.md` at the
+root of the tree when a `reviews/` directory exists there (an agentbox reviewer project):
+`ab project sync` hands that directory's Markdown files to the builder as `.review/<file>`.
