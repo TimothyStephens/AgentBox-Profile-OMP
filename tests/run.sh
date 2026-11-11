@@ -419,6 +419,50 @@ run_case "shared: plugin keys required — fail" fail \
 	"missing required key 'source'" \
 	"sed -i '/^source = /d' plugins.toml"
 
+# [[npm]] and [[repo]]: the two other ways an OMP plugin arrives (agentbox's plugins.py). Accepted
+# silently when they follow the launcher's rules, so this repo's own plugins.toml checks clean.
+NPM_OK='[[npm]]\nname = "@scope/pi-thing"\nversion = "1.2.3"\n'
+REPO_OK='[[repo]]\nname = "mags-codedev"\nurl = "https://github.com/x/y.git"\nref = "0123456789abcdef0123456789abcdef01234567"\nextension_dir = "ext"\n'
+
+run_case "omp: [[npm]] and [[repo]] are read, not unknown — pass" ok "" \
+	"printf '$NPM_OK$REPO_OK' >> plugins.toml"
+
+run_case "omp: npm version is exact — fail" fail \
+	"version '^1.2.3' must be exact" \
+	"printf '$NPM_OK' | sed 's/1.2.3/^1.2.3/' >> plugins.toml"
+
+run_case "omp: npm name is a package name — fail" fail \
+	"is not an npm package name" \
+	"printf '$NPM_OK' | sed 's/@scope\/pi-thing/Bad Name/' >> plugins.toml"
+
+run_case "omp: npm keys required — fail" fail \
+	"missing required key 'version'" \
+	"printf '$NPM_OK' | sed '/^version/d' >> plugins.toml"
+
+run_case "omp: repo ref is a pinned sha — fail" fail \
+	"ref 'main' must be a 40-character" \
+	"printf '$REPO_OK' | sed 's/^ref = .*/ref = \"main\"/' >> plugins.toml"
+
+run_case "omp: repo url is https — fail" fail \
+	"must be a plain https:// URL" \
+	"printf '$REPO_OK' | sed 's#https://#git://#' >> plugins.toml"
+
+run_case "omp: repo url without credentials — fail" fail \
+	"carries credentials" \
+	"printf '$REPO_OK' | sed 's#https://#https://user:pw@#' >> plugins.toml"
+
+run_case "omp: repo name is a plain directory name — fail" fail \
+	"not 'node_modules'" \
+	"printf '$REPO_OK' | sed 's/^name = .*/name = \"node_modules\"/' >> plugins.toml"
+
+run_case "omp: npm and repo names are unique — fail" fail \
+	"duplicate name" \
+	"printf '$NPM_OK$REPO_OK' | sed 's/^name = \"mags-codedev\"/name = \"@scope\/pi-thing\"/' >> plugins.toml"
+
+run_case "omp: unknown key in [[repo]] — warn" warn \
+	"unknown key 'branch'" \
+	"printf '$REPO_OK' | sed 's/^extension_dir = .*/branch = \"main\"/' >> plugins.toml"
+
 # --- the Containerfile -----------------------------------------------------
 
 run_case "shared: Containerfile ARG BASE then FROM \${BASE} — pass" ok "" \
@@ -611,9 +655,11 @@ exit_code_case "shared: build.sh status lists the seeds — pass" 0 \
 	"seeds:" \
 	env AGENTBOX_OMP_PROFILE="$WORK/no-such/profile" "$BUILD" status
 
+# Against a copy of the repo with no seed/: seed/ is gitignored, so the real checkout may hold a local
+# models.yml (the host's keyless copy), which would make this a test of the host rather than of status.
 exit_code_case "omp: build.sh status names a seed agentbox expects and nobody has — pass" 0 \
 	"models.yml: MISSING" \
-	env AGENTBOX_OMP_PROFILE="$WORK/no-such/profile" "$BUILD" status
+	bash -c 'mkdir -p "$2" && cp -a "$1"/. "$2"/ && rm -rf "$2/seed" && AGENTBOX_OMP_PROFILE="$2/no-such/profile" "$2/build.sh" status' _ "$REPO_DIR" "$WORK/no-seed-repo"
 
 exit_code_case "shared: build.sh exits 2 on an unknown command — fail" 2 \
 	"unknown command" \

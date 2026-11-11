@@ -106,6 +106,17 @@ README_RE = re.compile(r"^readme", re.IGNORECASE)
 PLUGIN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
 
+# The other two ways an OMP plugin arrives (agentbox's plugins.py, which installs this file): an npm package
+# pinned to an exact version, and a git checkout pinned to a commit. Same rules as the launcher's, so that
+# `check` fails here rather than at `ab profile install`.
+NPM_NAME_RE = re.compile(r"^(?:@[a-z0-9][a-z0-9._-]*/)?[a-z0-9][a-z0-9._-]*$")
+NPM_VERSION_RE = re.compile(r"^\d+\.\d+\.\d+(?:-[0-9A-Za-z.-]+)?(?:\+[0-9A-Za-z.-]+)?$")
+REPO_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*$")
+PLUGIN_SECTIONS = {"plugin": ("id", "marketplace", "source", "ref"),
+                   "npm": ("name", "version"),
+                   "repo": ("name", "url", "ref", "extension_dir")}
+PLUGIN_REQUIRED = {"plugin": PLUGIN_SECTIONS["plugin"], "npm": PLUGIN_SECTIONS["npm"], "repo": ("name", "url", "ref")}
+
 # reference/omp/rulebook-matching-pipeline.md, §6 `interruptMode`.
 INTERRUPT_MODES = {"never", "prose-only", "tool-only", "always"}
 
@@ -554,6 +565,61 @@ def check_prompts(root: Path, rep: Report) -> None:
             rep.warn(rel, "no frontmatter 'description' (the prompt-template format is not specified; see docs/prompts.md)")
 
 
+def _check_npm_and_repo(data: dict, rel: str, rep: Report) -> None:
+    """[[npm]] and [[repo]] entries, by the launcher's rules: every key known, the required ones present,
+    an exact npm version, an https URL without credentials, a 40-character ref, and names that are unique
+    across both kinds (each repo is checked out into a directory of that name, beside node_modules/)."""
+    seen: dict[str, str] = {}
+    for kind in ("npm", "repo"):
+        entries = data.get(kind, [])
+        if not isinstance(entries, list):
+            rep.error(rel, f"'{kind}' must be a list of [[{kind}]] tables")
+            continue
+        for index, entry in enumerate(entries, start=1):
+            label = f"{kind} #{index}"
+            if not isinstance(entry, dict):
+                rep.error(rel, f"{label}: not a table")
+                continue
+            name = entry.get("name")
+            if isinstance(name, str) and name:
+                label = f"{kind} '{name}'"
+            for key in PLUGIN_REQUIRED[kind]:
+                value = entry.get(key)
+                if not isinstance(value, str) or not value.strip():
+                    rep.error(rel, f"{label}: missing required key '{key}'")
+            for key in entry:
+                if key not in PLUGIN_SECTIONS[kind]:
+                    rep.warn(rel, f"{label}: unknown key '{key}'")
+            if not isinstance(name, str) or not name:
+                continue
+            if name in seen:
+                rep.error(rel, f"{label}: duplicate name (already a {seen[name]} entry)")
+            seen[name] = kind
+            if kind == "npm":
+                if not NPM_NAME_RE.match(name):
+                    rep.error(rel, f"{label}: '{name}' is not an npm package name ('pkg' or '@scope/pkg')")
+                version = entry.get("version")
+                if isinstance(version, str) and version and not NPM_VERSION_RE.match(version):
+                    rep.error(rel, f"{label}: version '{version}' must be exact (1.2.3), not a range or a tag")
+                continue
+            if name == "node_modules" or not REPO_NAME_RE.match(name):
+                rep.error(rel, f"{label}: name must be a plain directory name (letters, digits, '.', '_', '-'), "
+                               "and not 'node_modules'")
+            url = entry.get("url")
+            if isinstance(url, str) and url:
+                host = url[len("https://"):].split("/", 1)[0] if url.startswith("https://") else ""
+                if not url.startswith("https://") or not host or host.startswith(".") or ".." in url:
+                    rep.error(rel, f"{label}: url '{url}' must be a plain https:// URL (no git://, http:// or ssh)")
+                elif "@" in host:
+                    rep.error(rel, f"{label}: url carries credentials; a credential never enters a sandbox")
+            ref = entry.get("ref")
+            if isinstance(ref, str) and ref and not SHA1_RE.match(ref):
+                rep.error(rel, f"{label}: ref '{ref}' must be a 40-character lowercase commit sha, not a branch or tag")
+            ext = entry.get("extension_dir")
+            if ext is not None and (not isinstance(ext, str) or not REPO_NAME_RE.match(ext)):
+                rep.error(rel, f"{label}: extension_dir must be a plain directory name inside the checkout")
+
+
 def check_plugins(root: Path, rep: Report) -> None:
     """plugins.toml is declarative only: agentbox installs these. Names and ids
     follow reference/omp/marketplace.md, "Naming rules"; a ref must be a pinned
@@ -571,8 +637,10 @@ def check_plugins(root: Path, rep: Report) -> None:
         return
 
     for key in data:
-        if key != "plugin":
-            rep.warn(rel, f"unknown top-level key '{key}' (only [[plugin]] tables are read)")
+        if key not in PLUGIN_SECTIONS:
+            rep.warn(rel, f"unknown top-level key '{key}' (only [[plugin]], [[npm]] and [[repo]] tables are read)")
+
+    _check_npm_and_repo(data, rel, rep)
 
     entries = data.get("plugin", [])
     if not isinstance(entries, list):
