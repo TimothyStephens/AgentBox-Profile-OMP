@@ -93,18 +93,17 @@ version = "0.1.1"              # unchanged since omp-env
 
 # --- git checkouts ---------------------------------------------------------------------------------
 #
-# Each ref is `git ls-remote <url> main` as of 5 Nov 2026. MAGS arrives this way: omp-env cloned the repo
-# and pointed OMP at `mags-codedev-extension`, which is what settles that MAGS is an OMP extension rather
-# than a standalone tool.
+# Each ref is `git ls-remote <url> main` as of 5 Nov 2026.
+#
+# MAGS-CodeDev is NOT here any more (13 Nov). omp-env had pointed OMP at its `mags-codedev-extension`, but
+# MAGS-CodeDev commit 3d3d8a4c (3 Nov, "chore: drop the OMP extension, keep its manifest-design guide")
+# removed that directory, and the ref this file pinned (d44fea8c, 4 Nov) is after it: `ab profile install
+# omp` failed on `omp plugin link` with "package.json not found" and, being fail-fast, took the marketplace
+# copy down with it. MAGS is a standalone Python CLI now, meant to run as its own agentbox agent (its
+# README, "Running under agentbox"); what this profile keeps of it is skills/mags-manifest-design.
 #
 # pi-nvim-bridge is NOT here: Tim does not need it. (The profile's own note already said its install id was
 # not findable in the vendored reference docs.)
-
-[[repo]]
-name = "mags-codedev"
-url = "https://github.com/TimothyStephens/MAGS-CodeDev.git"
-ref = "d44fea8c5bf4021e3103ee9671a06940fc7f713c"
-extension_dir = "mags-codedev-extension"
 
 [[repo]]
 name = "pi-session-stats"

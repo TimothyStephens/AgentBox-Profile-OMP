@@ -1,5 +1,16 @@
 # Decisions
 
+## 2026-11-13: the MAGS-CodeDev `[[repo]]` entry is gone; MAGS is not an OMP extension at the pinned ref
+
+- What: removed `[[repo]] mags-codedev` (ref d44fea8c, `extension_dir = "mags-codedev-extension"`) from
+  `plugins.toml`; the status test names pi-session-stats instead.
+- Why: `ab profile install omp` failed on `omp plugin link` with "package.json not found". MAGS-CodeDev
+  commit 3d3d8a4c (3 Nov, "chore: drop the OMP extension, keep its manifest-design guide") removed the
+  extension; the pinned ref is after it and holds no `package.json` anywhere. MAGS is a standalone Python
+  CLI meant to run as its own agentbox agent (its README, "Running under agentbox"). What this profile
+  keeps of it is `skills/mags-manifest-design`. The installer is fail-fast, so the dead entry also took the
+  marketplace copy down with it and egm did not load in sessions.
+
 ## 2026-11-10: `seed/` — keyless config agentbox reads beside the live profile, installed by deploy
 
 - What: a `seed/` directory in the profile repo. `./build.sh deploy` copies each `seed/<name>` to
