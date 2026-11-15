@@ -811,7 +811,7 @@ SEED_DIR = "seed"
 
 def check_seed(root: Path, rep) -> None:
     """`seed/`: keyless copies of the files agentbox reads from ~/.config/agentbox/<agent>/ (OMP: models.yml,
-    config.yml, mcp.json, mags-codedev.yaml), which `build.sh deploy` installs when the live one is missing.
+    config.yml, mcp.json), which `build.sh deploy` installs when the live one is missing.
     Files only, and never a credential: agentbox refuses any `apiKey` in the model seed outright, and the
     rest are mounted read-only into every session, where the agent can read them. A `$VAR` reference and an
     empty or `none` value are not credentials."""

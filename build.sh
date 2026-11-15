@@ -18,7 +18,7 @@ LIVE="${AGENTBOX_OMP_PROFILE:-$HOME/.config/agentbox/omp/profile}"
 # never from the profile itself: keyless seeds and personal config a session mounts read-only. SEEDS names
 # the ones agentbox looks for; seed/<name> in this repo is a copy that `deploy` installs when the live one
 # is missing (never over it), and `status` reports each. Keys never go in them: `ab keys set <provider>`.
-SEEDS="models.yml config.yml mcp.json mags-codedev.yaml"
+SEEDS="models.yml config.yml mcp.json"
 SEED_DIR="$REPO/seed"
 
 say()  { printf '%s\n' "$*"; }

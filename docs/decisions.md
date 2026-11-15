@@ -1,5 +1,13 @@
 # Decisions
 
+## 2026-11-15: `mags-codedev.yaml` is not a seed any more
+
+- What: dropped from `build.sh` SEEDS, the README and the checker's docstring. The seeds are
+  `models.yml`, `config.yml`, `mcp.json`.
+- Why: MAGS-CodeDev f48ef34 (4 Nov) removed the `~/.omp/agent/mags-codedev.yaml` config path; a file
+  there "is simply ignored". The launcher stopped mounting it the same day (agentbox decisions.md,
+  15 Nov). MAGS stays outside agentbox as its own container, Tim's decision.
+
 ## 2026-11-13: the MAGS-CodeDev `[[repo]]` entry is gone; MAGS is not an OMP extension at the pinned ref
 
 - What: removed `[[repo]] mags-codedev` (ref d44fea8c, `extension_dir = "mags-codedev-extension"`) from

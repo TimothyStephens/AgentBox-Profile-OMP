@@ -23,7 +23,7 @@ that clone except `./build.sh deploy`, run on the host.
 | `THIRD_PARTY.md` | — | Provenance for everything vendored |
 | `docs/` | — | Format reference for each load directory, one file per directory, plus `decisions.md` |
 | `reference/omp/` | — | OMP's own format docs, the spec this repo cites |
-| `seed/` | copied to `~/.config/agentbox/omp/` | Keyless copies of what agentbox reads from there: `models.yml`, `config.yml`, `mcp.json`, `mags-codedev.yaml`. `deploy` installs a missing one and never overwrites; `status` reports each |
+| `seed/` | copied to `~/.config/agentbox/omp/` | Keyless copies of what agentbox reads from there: `models.yml`, `config.yml`, `mcp.json`. `deploy` installs a missing one and never overwrites; `status` reports each |
 
 Those five directories are mounted read-only into **every OMP session in every
 project**. `ab session start --no-profile` skips all of it, plugins and the image layer
@@ -32,7 +32,7 @@ included.
 agentbox reads OMP's own settings from `~/.config/agentbox/omp/`, beside the
 live profile, not from the profile: `models.yml` (the keyless model seed, from
 which each session's `models.yml` is generated for the providers that have a key
-file), `config.yml`, `mcp.json` and `mags-codedev.yaml`. A session without them
+file), `config.yml` and `mcp.json`. A session without them
 runs on OMP's defaults and says so. `seed/` in this repo is where a keyless copy
 of each lives: `./build.sh deploy` installs any whose live copy is missing (and
 never overwrites one that exists), `./build.sh status` reports each file as
