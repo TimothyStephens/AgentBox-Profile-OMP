@@ -1,5 +1,17 @@
 # Decisions
 
+## 2026-11-16: `deploy` fails when the live clone does not reach this repo's HEAD
+
+- What: after `git pull --ff-only`, `build.sh deploy` compares the live clone's HEAD with this
+  checkout's and fails (exit 1, "push this repo first") when they differ; `live_is_clean_clone`
+  also requires the live HEAD to be an ancestor of this repo's HEAD, so a live clone with its own
+  commits is "diverged" for `deploy` as it already was for `status`. The comparison is a function,
+  `live_matches_repo LIVE REPO`, and `build.sh` returns early when sourced so `tests/run.sh` can
+  call it against scratch repositories (deploy itself is host only).
+- Why: the pull fast-forwards from the live clone's `origin`, so with an unpushed commit here it
+  succeeded and printed "now at <old sha>" as if the deploy had happened; and a live clone ahead of
+  origin was accepted as clean although nothing would ever reconcile it (review of 16 Nov, item 23).
+
 ## 2026-11-15: `mags-codedev.yaml` is not a seed any more
 
 - What: dropped from `build.sh` SEEDS, the README and the checker's docstring. The seeds are

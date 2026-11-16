@@ -92,6 +92,33 @@ live_is_clean_clone() {
     REASON="has uncommitted local changes"
     return 1
   fi
+  # A live clone with commits this repo lacks is diverged, for deploy as for status: a fast-forward from
+  # origin would not reconcile it, and an edit made live instead of here must not be papered over.
+  local live_head
+  live_head="$(git -C "$LIVE" rev-parse HEAD 2>/dev/null)"
+  if ! git -C "$REPO" merge-base --is-ancestor "$live_head" HEAD 2>/dev/null; then
+    REASON="has commits this repo does not (diverged: ${live_head:0:12} is not an ancestor of this repo's HEAD)"
+    return 1
+  fi
+  return 0
+}
+
+# After a pull, the live clone must be at this repo's HEAD. deploy fast-forwards the live clone from ITS
+# origin, so an unpushed commit here leaves it behind while the pull reports success; that is the case
+# this catches. Takes the two paths as arguments so tests can run it against scratch repositories.
+live_matches_repo() {
+  local live="$1" repo="$2" live_head repo_head
+  live_head="$(git -C "$live" rev-parse HEAD 2>/dev/null)"
+  repo_head="$(git -C "$repo" rev-parse HEAD 2>/dev/null)"
+  if [[ -z "$live_head" || -z "$repo_head" ]]; then
+    warn "build.sh deploy: cannot read HEAD of $live or $repo"
+    return 1
+  fi
+  if [[ "$live_head" != "$repo_head" ]]; then
+    warn "build.sh deploy: live profile is at ${live_head:0:12} but this repo is at ${repo_head:0:12};"
+    warn "  push this repo first (deploy fast-forwards the live clone from its origin)."
+    return 1
+  fi
   return 0
 }
 
@@ -249,9 +276,10 @@ cmd_deploy() {
   fi
   say "== deploy: git -C $LIVE pull --ff-only"
   git -C "$LIVE" pull --ff-only || return 1
+  live_matches_repo "$LIVE" "$REPO" || return 1
   say "deploy: live profile is now at $(git -C "$LIVE" rev-parse --short HEAD)"
   deploy_seeds || return 1
-  say "deploy: new sessions pick it up; existing sessions keep the old settings.json"
+  say "deploy: new sessions pick it up; existing sessions keep what they loaded"
   return 0
 }
 
@@ -297,6 +325,9 @@ cmd_all() {
 usage() {
   sed -n '2,11p' "${BASH_SOURCE[0]}" | sed 's/^# \{0,1\}//'
 }
+
+# tests/run.sh sources this file to call the functions above directly; only a direct run dispatches.
+[[ "${BASH_SOURCE[0]}" == "$0" ]] || return 0
 
 case "${1:-}" in
   check)   cmd_check ;;

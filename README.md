@@ -107,7 +107,10 @@ URL, or this checkout if it has no origin) to `profile/`. After that it only
 fast-forwards: if the directory exists but is not a clean clone of this repo
 with the same `origin`, it refuses with exit 2 and prints the one-time
 migration: move it aside to `profile.pre-repo`, then `git clone` this repo in
-its place.
+its place. A live clone with commits this repo lacks counts as diverged, not
+clean. The pull comes from the live clone's `origin`, not from this checkout,
+so after it `deploy` compares the two HEADs and fails with "push this repo
+first" when they differ.
 
 `install` runs `ab profile install omp`, then `ab image build omp` if a
 `Containerfile` exists. It exits 3 if `ab` is not on PATH or lacks one of those
