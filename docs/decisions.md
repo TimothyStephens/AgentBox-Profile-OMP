@@ -1,5 +1,20 @@
 # Decisions
 
+## 2026-11-16: `check` applies the launcher's plugins.toml and Containerfile rules exactly
+
+- What: in `plugins.toml` an unknown section or an unknown key in any `[[plugin]]`, `[[npm]]` or
+  `[[repo]]` entry is an error (it was a warning); a `[[plugin]]` `source` must be GitHub shorthand
+  or a plain https URL without credentials or `..` (it was not checked); `extension_dir` accepts
+  what `plugins.py _repo` accepts (`.` and nested relative paths) and refuses absolute paths, a
+  leading `..` and anything `normpath` would rewrite (it accepted only a single directory name, so
+  `.` was refused). In the `Containerfile`, `ARG BASE` and `FROM ${BASE}` match case-sensitively
+  (`ARG base` was accepted) and the checksum rule applies to RUN and ADD only (a URL in ENV or
+  LABEL failed it).
+- Why: the file's own comment promised an ERROR for an unknown key, and a warning does not stop a
+  deploy that `ab profile install omp` then refuses; the other four rules drifted from the launcher
+  and from the Claude checker, failing what the install accepts or passing what it refuses (review
+  of 16 Nov, item 24).
+
 ## 2026-11-16: `deploy` fails when the live clone does not reach this repo's HEAD
 
 - What: after `git pull --ff-only`, `build.sh deploy` compares the live clone's HEAD with this

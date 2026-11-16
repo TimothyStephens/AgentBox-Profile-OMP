@@ -419,6 +419,33 @@ run_case "shared: plugin keys required — fail" fail \
 	"missing required key 'source'" \
 	"sed -i '/^source = /d' plugins.toml"
 
+# Unknown keys and sections are errors, as for the launcher (plugins.py _check_keys, parse): a typo'd key
+# is an entry with a value missing, and a misspelt section is a set of entries nothing installs.
+run_case "shared: plugin keys known — fail" fail \
+	"plugin 'egm@egm': unknown key 'name' (allowed: id, marketplace, source, ref)" \
+	"printf 'name = \"egm@egm\"\n' >> plugins.toml"
+
+run_case "shared: plugins.toml unknown section — fail" fail \
+	"unknown section [[plugins]]" \
+	"sed -i 's/^\[\[plugin\]\]/[[plugins]]/' plugins.toml"
+
+# source: GitHub shorthand or a plain https URL, never a local path or a URL with credentials (the
+# launcher's SHORTHAND and _check_https rules).
+run_case "shared: plugin source is shorthand or https — pass" ok "" \
+	"sed -i 's|^source = .*|source = \"https://github.com/google/elephant-goldfish-model.git\"|' plugins.toml"
+
+run_case "shared: plugin source is shorthand or https — fail" fail \
+	"source '/tmp/egm' is neither GitHub shorthand" \
+	"sed -i 's|^source = .*|source = \"/tmp/egm\"|' plugins.toml"
+
+run_case "shared: plugin source is shorthand or https — fail (credentials)" fail \
+	"carries credentials" \
+	"sed -i 's|^source = .*|source = \"https://user:pw@github.com/google/egm.git\"|' plugins.toml"
+
+run_case "shared: plugin source is shorthand or https — fail (dot-dot)" fail \
+	"is not a plain https URL" \
+	"sed -i 's|^source = .*|source = \"https://github.com/google/../egm.git\"|' plugins.toml"
+
 # [[npm]] and [[repo]]: the two other ways an OMP plugin arrives (agentbox's plugins.py). Accepted
 # silently when they follow the launcher's rules, so this repo's own plugins.toml checks clean.
 NPM_OK='[[npm]]\nname = "@scope/pi-thing"\nversion = "1.2.3"\n'
@@ -459,9 +486,37 @@ run_case "omp: npm and repo names are unique — fail" fail \
 	"duplicate name" \
 	"printf '$NPM_OK$REPO_OK' | sed 's/^name = \"mags-codedev\"/name = \"@scope\/pi-thing\"/' >> plugins.toml"
 
-run_case "omp: unknown key in [[repo]] — warn" warn \
-	"unknown key 'branch'" \
+run_case "omp: unknown key in [[repo]] — fail" fail \
+	"unknown key 'branch' (allowed: name, url, ref, extension_dir)" \
 	"printf '$REPO_OK' | sed 's/^extension_dir = .*/branch = \"main\"/' >> plugins.toml"
+
+run_case "omp: unknown key in [[npm]] — fail" fail \
+	"unknown key 'verison' (allowed: name, version)" \
+	"printf '$NPM_OK' | sed 's/^version = /verison = /' >> plugins.toml"
+
+# extension_dir accepts what the launcher's _repo accepts: "." (the default) and nested relative paths;
+# refuses absolute paths, a leading `..` and anything normpath would rewrite.
+run_case "omp: repo extension_dir is a relative path inside the checkout — pass" ok "" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \".\"|' >> plugins.toml"
+
+run_case "omp: repo extension_dir is a relative path inside the checkout — pass (nested)" ok "" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \"packages/ext\"|' >> plugins.toml"
+
+run_case "omp: repo extension_dir is a relative path inside the checkout — fail (absolute)" fail \
+	"extension_dir '/ext' must be a plain relative path inside the repo" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \"/ext\"|' >> plugins.toml"
+
+run_case "omp: repo extension_dir is a relative path inside the checkout — fail (dot-dot)" fail \
+	"extension_dir '../ext' must be a plain relative path inside the repo" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \"../ext\"|' >> plugins.toml"
+
+run_case "omp: repo extension_dir is a relative path inside the checkout — fail (not normalised)" fail \
+	"extension_dir 'a/../..' must be a plain relative path inside the repo" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \"a/../..\"|' >> plugins.toml"
+
+run_case "omp: repo extension_dir is a relative path inside the checkout — fail (empty)" fail \
+	"extension_dir must be a non-empty string" \
+	"printf '$REPO_OK' | sed 's|^extension_dir = .*|extension_dir = \"\"|' >> plugins.toml"
 
 # --- the Containerfile -----------------------------------------------------
 
@@ -475,6 +530,15 @@ run_case "shared: Containerfile ARG BASE then FROM \${BASE} — fail" fail \
 run_case "shared: Containerfile FROM is pinned to \${BASE} — fail" fail \
 	"second instruction must be 'FROM \${BASE}'" \
 	"sed -i '2s|.*|FROM debian:bookworm|' Containerfile"
+
+# Case-sensitive, as the launcher is: `ARG base` declares an argument FROM ${BASE} never reads.
+run_case "shared: Containerfile ARG BASE then FROM \${BASE} — fail (lowercase arg base)" fail \
+	"first instruction must be 'ARG BASE'" \
+	"sed -i '1s/.*/ARG base/' Containerfile"
+
+run_case "shared: Containerfile FROM is pinned to \${BASE} — fail (lowercase base)" fail \
+	"second instruction must be 'FROM \${BASE}'" \
+	"sed -i '2s|.*|FROM \${base}|' Containerfile"
 
 run_case "shared: Containerfile sets no USER/ENTRYPOINT/CMD — pass" ok "" \
 	"printf 'ENV PAGER=less\n' >> Containerfile"
@@ -497,6 +561,14 @@ run_case "shared: Containerfile downloads are checksum-verified — pass" ok "" 
 run_case "shared: Containerfile downloads are checksum-verified — fail" fail \
 	"download is not checksum-verified" \
 	"printf 'RUN curl -fsSL -o /tmp/x https://example.invalid/x.tar.gz\n' >> Containerfile"
+
+run_case "shared: Containerfile downloads are checksum-verified — fail (ADD)" fail \
+	"download is not checksum-verified" \
+	"printf 'ADD https://example.invalid/x.tar.gz /tmp/x\n' >> Containerfile"
+
+# Only RUN and ADD fetch: a URL in ENV or LABEL downloads nothing.
+run_case "shared: Containerfile downloads are checksum-verified — pass (URL in ENV)" ok "" \
+	"printf 'ENV DOCS_URL=https://example.invalid/docs\nLABEL org.opencontainers.image.source=https://example.invalid/repo\n' >> Containerfile"
 
 run_case "shared: Containerfile is optional — pass" ok "" \
 	"rm Containerfile"

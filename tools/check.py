@@ -105,6 +105,9 @@ README_RE = re.compile(r"^readme", re.IGNORECASE)
 # reference/omp/marketplace.md, "Naming rules".
 PLUGIN_NAME_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9.-]*$")
 SHA1_RE = re.compile(r"^[0-9a-f]{40}$")
+# A [[plugin]] source: GitHub shorthand as `/marketplace add` takes it, or an https URL (the launcher's
+# SHORTHAND rule). A local path is refused: the install runs in a container that sees none of the host.
+SHORTHAND_RE = re.compile(r"^[A-Za-z0-9][A-Za-z0-9._-]*/[A-Za-z0-9][A-Za-z0-9._-]*$")
 
 # The other two ways an OMP plugin arrives (agentbox's plugins.py, which installs this file): an npm package
 # pinned to an exact version, and a git checkout pinned to a commit. Same rules as the launcher's, so that
@@ -116,6 +119,8 @@ PLUGIN_SECTIONS = {"plugin": ("id", "marketplace", "source", "ref"),
                    "npm": ("name", "version"),
                    "repo": ("name", "url", "ref", "extension_dir")}
 PLUGIN_REQUIRED = {"plugin": PLUGIN_SECTIONS["plugin"], "npm": PLUGIN_SECTIONS["npm"], "repo": ("name", "url", "ref")}
+# Which instructions fetch: a URL in ENV, LABEL or a comment-like ARG downloads nothing.
+FETCHING_VERBS = ("RUN", "ADD")
 
 # reference/omp/rulebook-matching-pipeline.md, §6 `interruptMode`.
 INTERRUPT_MODES = {"never", "prose-only", "tool-only", "always"}
@@ -565,6 +570,19 @@ def check_prompts(root: Path, rep: Report) -> None:
             rep.warn(rel, "no frontmatter 'description' (the prompt-template format is not specified; see docs/prompts.md)")
 
 
+def _https_problem(url: str) -> str | None:
+    """Why `url` is not a plain https URL the launcher would clone, or None when it is (plugins.py
+    _check_https): https:// only, no credentials in the host part, no `..` anywhere."""
+    if not url.startswith("https://"):
+        return "must be a plain https:// URL (no git://, http:// or ssh)"
+    host = url[len("https://"):].split("/", 1)[0]
+    if "@" in host:
+        return "carries credentials; a credential never enters a sandbox"
+    if not host or host.startswith(".") or ".." in url:
+        return "is not a plain https URL"
+    return None
+
+
 def _check_npm_and_repo(data: dict, rel: str, rep: Report) -> None:
     """[[npm]] and [[repo]] entries, by the launcher's rules: every key known, the required ones present,
     an exact npm version, an https URL without credentials, a 40-character ref, and names that are unique
@@ -589,7 +607,8 @@ def _check_npm_and_repo(data: dict, rel: str, rep: Report) -> None:
                     rep.error(rel, f"{label}: missing required key '{key}'")
             for key in entry:
                 if key not in PLUGIN_SECTIONS[kind]:
-                    rep.warn(rel, f"{label}: unknown key '{key}'")
+                    # An error, as for the launcher: a typo'd key is an entry with a value missing.
+                    rep.error(rel, f"{label}: unknown key '{key}' (allowed: {', '.join(PLUGIN_SECTIONS[kind])})")
             if not isinstance(name, str) or not name:
                 continue
             if name in seen:
@@ -607,17 +626,22 @@ def _check_npm_and_repo(data: dict, rel: str, rep: Report) -> None:
                                "and not 'node_modules'")
             url = entry.get("url")
             if isinstance(url, str) and url:
-                host = url[len("https://"):].split("/", 1)[0] if url.startswith("https://") else ""
-                if not url.startswith("https://") or not host or host.startswith(".") or ".." in url:
-                    rep.error(rel, f"{label}: url '{url}' must be a plain https:// URL (no git://, http:// or ssh)")
-                elif "@" in host:
-                    rep.error(rel, f"{label}: url carries credentials; a credential never enters a sandbox")
+                problem = _https_problem(url)
+                if problem is not None:
+                    rep.error(rel, f"{label}: url '{url}' {problem}")
             ref = entry.get("ref")
             if isinstance(ref, str) and ref and not SHA1_RE.match(ref):
                 rep.error(rel, f"{label}: ref '{ref}' must be a 40-character lowercase commit sha, not a branch or tag")
             ext = entry.get("extension_dir")
-            if ext is not None and (not isinstance(ext, str) or not REPO_NAME_RE.match(ext)):
-                rep.error(rel, f"{label}: extension_dir must be a plain directory name inside the checkout")
+            if ext is None:
+                continue
+            # The launcher's rule (plugins.py _repo): joined onto the clone, so it must stay inside it. "." is
+            # the default and nested paths are fine; an absolute path, a leading `..` or anything normpath
+            # would rewrite (`a/../..`, `a//b`, `a/..`) is refused.
+            if not isinstance(ext, str) or not ext.strip():
+                rep.error(rel, f"{label}: extension_dir must be a non-empty string")
+            elif ext.startswith("/") or ext.split("/")[0] == ".." or os.path.normpath(ext) != ext:
+                rep.error(rel, f"{label}: extension_dir '{ext}' must be a plain relative path inside the repo")
 
 
 def check_plugins(root: Path, rep: Report) -> None:
@@ -638,7 +662,8 @@ def check_plugins(root: Path, rep: Report) -> None:
 
     for key in data:
         if key not in PLUGIN_SECTIONS:
-            rep.warn(rel, f"unknown top-level key '{key}' (only [[plugin]], [[npm]] and [[repo]] tables are read)")
+            # An error, as for the launcher: a misspelt section is a set of entries nothing installs.
+            rep.error(rel, f"unknown section [[{key}]] (only [[plugin]], [[npm]] and [[repo]] tables are read)")
 
     _check_npm_and_repo(data, rel, rep)
 
@@ -661,8 +686,8 @@ def check_plugins(root: Path, rep: Report) -> None:
             if not isinstance(value, str) or not value.strip():
                 rep.error(rel, f"{label}: missing required key '{key}'")
         for key in entry:
-            if key not in ("id", "marketplace", "source", "ref"):
-                rep.warn(rel, f"{label}: unknown key '{key}'")
+            if key not in PLUGIN_SECTIONS["plugin"]:
+                rep.error(rel, f"{label}: unknown key '{key}' (allowed: {', '.join(PLUGIN_SECTIONS['plugin'])})")
 
         if not isinstance(plugin_id, str) or "@" not in plugin_id:
             if isinstance(plugin_id, str) and plugin_id:
@@ -687,6 +712,13 @@ def check_plugins(root: Path, rep: Report) -> None:
         declared = entry.get("marketplace")
         if isinstance(declared, str) and declared and declared != marketplace:
             rep.error(rel, f"{label}: marketplace is '{declared}' but the id says '{marketplace}'")
+
+        source = entry.get("source")
+        if isinstance(source, str) and source and not SHORTHAND_RE.match(source):
+            problem = _https_problem(source)
+            if problem is not None:
+                rep.error(rel, f"{label}: source '{source}' is neither GitHub shorthand 'owner/repo' nor a plain "
+                               f"https:// URL ({problem})")
 
         ref = entry.get("ref")
         if isinstance(ref, str) and ref and not SHA1_RE.match(ref):
@@ -729,14 +761,16 @@ def check_containerfile(root: Path, rep: Report) -> None:
         rep.error(rel, "has no instructions")
         return
 
+    # Case-sensitive: the launcher (profile.py check_user_containerfile) looks for the ARG named BASE and
+    # a FROM of exactly ${BASE}; `ARG base` declares a different, unused argument and FROM gets nothing.
     first_line, first = instructions[0]
-    if not re.fullmatch(r"ARG\s+BASE", first, re.IGNORECASE):
+    if not re.fullmatch(r"ARG\s+BASE", first):
         rep.error(rel, f"line {first_line}: first instruction must be 'ARG BASE' (ab passes the current agentbox-omp tag)")
     if len(instructions) < 2:
         rep.error(rel, "second instruction must be 'FROM ${BASE}'")
     else:
         second_line, second = instructions[1]
-        if not re.fullmatch(r"FROM\s+\$\{BASE\}(\s+AS\s+\S+)?", second, re.IGNORECASE):
+        if not re.fullmatch(r"FROM\s+\$\{BASE\}(\s+(?:AS|as)\s+\S+)?", second):
             rep.error(rel, f"line {second_line}: second instruction must be 'FROM ${{BASE}}'")
 
     for number, instruction in instructions:
@@ -744,6 +778,10 @@ def check_containerfile(root: Path, rep: Report) -> None:
         if verb in ("USER", "ENTRYPOINT", "CMD"):
             rep.error(rel, f"line {number}: must not set {verb} (the agentbox base image owns it)")
 
+        # Only an instruction that fetches is held to the checksum rule: a URL in ENV, LABEL or a comment
+        # inside an ARG default downloads nothing (the Claude checker applies the same RUN/ADD rule).
+        if verb not in FETCHING_VERBS:
+            continue
         urls = re.findall(r"https?://[^\s'\"`;)]+", instruction)
         if not urls:
             continue
