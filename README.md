@@ -75,7 +75,7 @@ at least one error. What it enforces is listed in
 [`tools/check.py`](tools/check.py); every rule has a test.
 
 ```sh
-./tests/run.sh      # 102 cases: the rules, the warnings, the host-only refusals
+./tests/run.sh      # every rule, the warnings, the host-only refusals
 ```
 
 Run both. A green `check` with a red `tests/run.sh` means the checker itself
@@ -146,5 +146,6 @@ agentbox. `deploy` and `install` do not and will refuse.
 which is gitignored and holds EGM's artifacts (`.dev/docs`, see `AGENTS.md`)
 and show-me's HTML files (`.dev/show-me`). A run that produced artifacts still
 passes, and `.dev/` is skipped by the symlink and size rules because it is
-never deployed. The secret-name rules (`.env*`, `*.pem`, `id_*`) still apply
-inside it, so don't park anything sensitive there.
+never deployed. The secret-name rules (`.env*`, `*.pem`, `*.key`, `id_*`, a
+`secrets/` directory) still apply inside it, so don't park anything sensitive
+there.

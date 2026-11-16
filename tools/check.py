@@ -128,7 +128,10 @@ INTERRUPT_MODES = {"never", "prose-only", "tool-only", "always"}
 MAX_FILE_BYTES = 1024 * 1024
 AGENTS_MD_WARN_LINES = 150
 
-SECRET_PATTERNS = (".env*", "*.pem", "id_*")
+# The names agentbox masks in a session: a file of that name here would read as empty there, and is a key
+# sitting in the grant here. A path component named secrets/ is masked whole, so the directory is an error.
+SECRET_PATTERNS = (".env*", "*.pem", "*.key", "id_*")
+SECRETS_NAME = "secrets"
 
 
 # --- reporting --------------------------------------------------------------
@@ -794,8 +797,9 @@ def check_containerfile(root: Path, rep: Report) -> None:
 def check_hygiene(root: Path, rep: Report) -> None:
     """No symlinks (they would not survive a read-only mount and
     can escape the profile) and nothing over 1 MB in tracked paths; a name
-    matching .env*, *.pem or id_* is an error anywhere, .dev/ included; .dev/ is
-    otherwise skipped, because it is gitignored and never deployed."""
+    matching .env*, *.pem, *.key or id_*, or a secrets/ directory, is an error
+    anywhere, .dev/ included; .dev/ is otherwise skipped, because it is
+    gitignored and never deployed."""
     import fnmatch
 
     dev_dir = root / ".dev"
@@ -810,6 +814,10 @@ def check_hygiene(root: Path, rep: Report) -> None:
         in_dev = here == dev_dir or dev_dir in here.parents
         for name in dirnames:
             entry = here / name
+            if name == SECRETS_NAME:
+                rep.error(rel_of(root, entry), "a directory named secrets/: agentbox masks it whole; keys never "
+                                               "live in the profile")
+                continue
             if entry == dev_dir or in_dev:
                 continue
             if entry.is_symlink():
@@ -820,6 +828,8 @@ def check_hygiene(root: Path, rep: Report) -> None:
 
             # Secret-looking names are an error anywhere, .dev/ included.
             secret = next((p for p in SECRET_PATTERNS if fnmatch.fnmatch(name, p)), None)
+            if name == SECRETS_NAME:
+                secret = SECRETS_NAME
             if secret is not None:
                 rep.error(rel, f"name matches '{secret}': secrets and keys never live in the profile")
                 continue

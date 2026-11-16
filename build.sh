@@ -132,7 +132,7 @@ print_migration() {
 }
 
 cmd_status() {
-  local head live_head
+  local head live_head list rc=0
   head="$(git -C "$REPO" rev-parse HEAD 2>/dev/null || echo '(no commits)')"
   say "repo:  $REPO"
   say "  HEAD $head"
@@ -157,13 +157,16 @@ cmd_status() {
   fi
 
   say "plugins:"
-  if [[ -f "$REPO/plugins.toml" ]]; then
-    python3 "$REPO/tools/check.py" --list-plugins --root "$REPO" \
-      | while read -r id source ref; do
-          say "  $id  $source  ${ref:0:12}"
-        done
-  else
+  if [[ ! -f "$REPO/plugins.toml" ]]; then
     say "  (no plugins.toml)"
+  elif list="$(python3 "$REPO/tools/check.py" --list-plugins --root "$REPO")"; then
+    [[ -z "$list" ]] || while read -r id source ref; do
+      say "  $id  $source  ${ref:0:12}"
+    done <<<"$list"
+  else
+    # The checker has said why on stderr; status itself must not read as fine.
+    say "  (plugins.toml does not parse)"
+    rc=1
   fi
 
   say "seeds: $(seed_dst)"
@@ -179,7 +182,7 @@ cmd_status() {
     if ab_has "image build"; then say "  image build: available"
     else say "  image build: NOT available"; fi
   fi
-  return 0
+  return $rc
 }
 
 # --- seeds -----------------------------------------------------------------

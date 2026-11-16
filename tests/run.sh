@@ -22,6 +22,7 @@ TESTS_DIR="$(cd -- "$(dirname -- "${BASH_SOURCE[0]}")" && pwd)"
 REPO_DIR="$(dirname -- "$TESTS_DIR")"
 CHECK="$REPO_DIR/tools/check.py"
 BUILD="$REPO_DIR/build.sh"
+SIBLING="$REPO_DIR/../agentbox-profile-claude/tests/run.sh"
 
 WORK="$(mktemp -d)"
 trap 'rm -rf "$WORK"' EXIT
@@ -318,6 +319,10 @@ run_case "shared: skill frontmatter required keys — fail" fail \
 	"missing required key 'description'" \
 	"printf -- '---\nname: good-skill\n---\n\nBody.\n' > skills/good-skill/SKILL.md"
 
+run_case "shared: skill frontmatter present — fail" fail \
+	"no frontmatter (a '---' delimited block is required)" \
+	"printf '# no frontmatter\n' > skills/good-skill/SKILL.md"
+
 run_case "shared: frontmatter parses — pass" ok "" \
 	"printf -- '---\nname: good-skill\ndescription: >\n  A folded block scalar.\n---\n\nBody.\n' > skills/good-skill/SKILL.md"
 
@@ -378,6 +383,29 @@ run_case "shared: id_* is an error in .dev — fail" fail \
 	".dev/id_ed25519: name matches 'id_*'" \
 	"mkdir -p .dev && touch .dev/id_ed25519"
 
+run_case "shared: *.key is an error anywhere — pass" ok "" \
+	"printf 'x\n' > tools/keyring.md"
+
+run_case "shared: *.key is an error anywhere — fail" fail \
+	"name matches '*.key'" \
+	"touch tools/server.key"
+
+run_case "shared: *.key is an error in .dev — fail" fail \
+	".dev/server.key: name matches '*.key'" \
+	"mkdir -p .dev && touch .dev/server.key"
+
+# A path component named secrets is masked whole by agentbox; a name that only contains it is fine.
+run_case "shared: secrets/ is an error anywhere — pass" ok "" \
+	"mkdir -p tools/my-secrets && printf 'x\n' > tools/my-secrets/notes.md"
+
+run_case "shared: secrets/ is an error anywhere — fail" fail \
+	"tools/secrets: a directory named secrets/" \
+	"mkdir -p tools/secrets && printf 'x\n' > tools/secrets/notes.md"
+
+run_case "shared: secrets/ is an error in .dev — fail" fail \
+	".dev/secrets: a directory named secrets/" \
+	"mkdir -p .dev/secrets"
+
 # --- .dev/ is otherwise skipped --------------------------------------------
 
 run_case "shared: .dev/ is otherwise skipped — pass" ok "" \
@@ -406,6 +434,14 @@ run_case "shared: plugin ref is a pinned sha — pass" ok "" \
 run_case "shared: plugin ref is a pinned sha — fail" fail \
 	"must be a 40-character lowercase commit sha" \
 	"sed -i 's/^ref = .*/ref = \"main\"/' plugins.toml"
+
+run_case "shared: plugin id is name@marketplace — fail" fail \
+	"id must be '<name>@<marketplace>'" \
+	"sed -i 's/^id = .*/id = \"egm\"/' plugins.toml"
+
+run_case "shared: plugin id is unique — fail" fail \
+	"duplicate id" \
+	"cat plugins.toml plugins.toml > p.tmp && mv p.tmp plugins.toml"
 
 run_case "shared: plugin id matches its marketplace — fail" fail \
 	"but the id says 'egm'" \
@@ -746,6 +782,11 @@ exit_code_case "shared: build.sh exits 2 on an unknown command — fail" 2 \
 	"unknown command" \
 	"$BUILD" frobnicate
 
+# A plugins.toml that does not parse must not leave status reading as fine.
+exit_code_case "shared: build.sh status fails when plugins.toml does not parse — fail" 1 \
+	"(plugins.toml does not parse)" \
+	bash -c 'mkdir -p "$2" && cp -a "$1"/. "$2"/ && rm -rf "$2/.git" && printf "name = [[\n" > "$2/plugins.toml" && AGENTBOX_OMP_PROFILE="$2/no-such/profile" "$2/build.sh" status' _ "$REPO_DIR" "$WORK/broken-plugins-repo"
+
 # deploy itself is host only, so scratch repositories stand in for origin, the live clone and this checkout
 # and the functions are called directly from a sourced build.sh.
 git_q() { git -c user.name=t -c user.email=t@t.invalid -c init.defaultBranch=main "$@" >/dev/null 2>&1; }
@@ -772,6 +813,30 @@ exit_code_case "shared: build.sh deploy treats a live clone with its own commits
 # NOT COVERED: exit 3 (ab lacks the command). install refuses with exit 2
 # before it looks for ab whenever /run/agentbox exists, so this path is only
 # reachable from a host shell. Reported, not excused.
+
+# --- the parity promise ------------------------------------------------------
+# Every "shared:" label in this file exists in the sibling repo's run.sh, compared without a trailing
+# "(detail)". This run checks this file against the sibling; the sibling's own run checks the other way.
+
+sibling_labels() {
+	local label="shared: every shared case label exists in the sibling repo — pass"
+	local missing=() stem
+	if [[ ! -f "$SIBLING" ]]; then
+		printf 'skip  %s (no sibling checkout at %s)\n' "$label" "$SIBLING"
+		return 0
+	fi
+	while IFS= read -r stem; do
+		grep -qF -- "$stem" "$SIBLING" || missing+=("$stem")
+	done < <(grep -o '"shared:[[:space:]][^"]*"' "$TESTS_DIR/run.sh" \
+		| sed -e 's/^"//' -e 's/"$//' -e 's/ ([^()]*)$//' | sort -u)
+	if (( ${#missing[@]} == 0 )); then
+		pass "$label"
+	else
+		fail "$label" "missing in $SIBLING:
+$(printf '%s\n' "${missing[@]}")"
+	fi
+}
+sibling_labels
 
 # --- summary ----------------------------------------------------------------
 

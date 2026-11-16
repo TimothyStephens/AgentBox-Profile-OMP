@@ -3,7 +3,7 @@
 # agentbox builds this with `ab image build omp` and passes the current
 # agentbox-omp tag as BASE, so this file must start with `ARG BASE` followed by
 # `FROM ${BASE}` and must not set USER, ENTRYPOINT or CMD — the base image owns
-# all three. `ab run --no-profile` skips this layer.
+# all three. `ab session start --no-profile` skips this layer.
 #
 # As in the sibling Claude profile repo, this file holds neovim 0.10.4 with a
 # sha256 check, EDITOR and VISUAL, and nothing else. It extracts into /usr/local so nvim lands on the

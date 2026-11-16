@@ -1,5 +1,18 @@
 # Decisions
 
+## 2026-11-16: secret names, `status` on a broken plugins.toml, shared test labels checked
+
+- What: the secret-name rule in `tools/check.py` adds `*.key` and any path component named `secrets`
+  (the names agentbox masks in a session), anywhere, `.dev/` included. `./build.sh status` exits 1 and
+  prints "(plugins.toml does not parse)" when `check.py --list-plugins` fails, instead of listing
+  nothing and exiting 0. `tests/run.sh` ends with a case that greps the sibling repo's `run.sh` for
+  every `shared:` label in this one (a trailing "(detail)" ignored; skipped with a note when the
+  sibling checkout is absent), and the labels were renamed so both repos pass it; no case was dropped.
+  Stale text fixed: the README's "102 cases" and the Containerfile's `ab run --no-profile`.
+- Why: a `server.key` or `secrets/` passed `check` although a session would mask it; a broken
+  plugins.toml made `status` look clean; and "same test names in both repos" was a promise nothing
+  checked, which had drifted (review of 16 Nov, item 51).
+
 ## 2026-11-16: `check` applies the launcher's plugins.toml and Containerfile rules exactly
 
 - What: in `plugins.toml` an unknown section or an unknown key in any `[[plugin]]`, `[[npm]]` or
