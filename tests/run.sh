@@ -691,7 +691,7 @@ run_case "omp: build.sh is executable — fail" warn \
 # ===========================================================================
 
 run_case "shared: seed/ holds keyless config — pass" ok "" \
-	"mkdir seed && printf 'providers:\n  llama-cpp:\n    baseUrl: http://10.0.0.2:8080/v1\n' > seed/models.yml"
+	"mkdir seed && printf 'providers:\n  llama-cpp:\n    baseUrl: http://192.0.2.2:8080/v1\n' > seed/models.yml"
 
 run_case "shared: seed/ with a subdirectory — fail" fail \
 	"seed/ holds files only" \
