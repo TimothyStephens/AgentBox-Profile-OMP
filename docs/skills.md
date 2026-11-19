@@ -75,7 +75,7 @@ them there, never by copying one back into `skills/`.
 | `systematic-debugging` | root-cause a bug or failure before fixing it | yes |
 | `verification-before-completion` | run the checks before claiming work is done | yes |
 | `test-driven-development` | write the test first | yes |
-| `webapp-testing` | drive a local web UI with Playwright (not in the images; see agentbox-skills' THIRD_PARTY.md) | yes |
+| `webapp-testing` | drive a local web UI with Playwright (needs `image_playwright = true` and rebuilt images) | yes |
 | `differential-review` | security-focused review of a PR, commit or diff | yes |
 | `insecure-defaults` | find fail-open insecure defaults (hardcoded secrets, weak auth) | yes |
 | `supply-chain-risk-auditor` | audit a project's dependencies (needs network the `packages` egress mostly blocks) | yes |
