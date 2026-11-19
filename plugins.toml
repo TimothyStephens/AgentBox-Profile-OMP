@@ -73,7 +73,7 @@ ref = "464db031e7dd1b9a79803ac8ea45f55c7c20c5bc"
 id = "agentbox@agentbox-skills"
 marketplace = "agentbox-skills"
 source = "TimothyStephens/AgentBox-Skills"
-ref = "245ba14b4369e3f1596fe9950d8da6b7a4323cdb"
+ref = "b28abdfea8da7f5a5bf0c96d686c04075e879099"
 
 # --- npm packages ----------------------------------------------------------------------------------
 #
