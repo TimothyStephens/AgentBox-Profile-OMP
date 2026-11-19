@@ -12,7 +12,7 @@ that clone except `./build.sh deploy`, run on the host.
 | Path | Mounted at | What it is |
 | --- | --- | --- |
 | `AGENTS.md` | folded into the session instructions | Standing rules for every session |
-| `skills/` | `~/.omp/agent/skills` (read-only) | Agent Skills — [format](docs/skills.md) |
+| `skills/` | `~/.omp/agent/skills` (read-only) | Agent Skills only this profile has — [format](docs/skills.md). Empty but for `.gitkeep`: shared skills come from the `agentbox-skills` plugin |
 | `rules/` | `~/.omp/agent/rules` (read-only) | Rulebook / always-apply / TTSR rules — [format](docs/rules.md) |
 | `prompts/` | `~/.omp/agent/prompts` (read-only) | Prompt templates — [format](docs/prompts.md); ships empty |
 | `agents/` | `~/.omp/agent/agents` (read-only) | Task-agent definitions — [format](docs/agents.md) |

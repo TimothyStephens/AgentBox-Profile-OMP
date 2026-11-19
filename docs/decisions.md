@@ -1,5 +1,25 @@
 # Decisions
 
+## 2026-11-19: the shared skills come from agentbox-skills, not from copies in `skills/`
+
+- What: the five skills every profile carried as a byte-identical copy (`learn-repo`, `show-me`,
+  `ub-mode`, `review-drift`, `mags-manifest-design`) are removed from `skills/` and come from the
+  `agentbox-skills` repository (<https://github.com/TimothyStephens/AgentBox-Skills>) instead, declared
+  in `plugins.toml` as the marketplace plugin `agentbox@agentbox-skills` pinned at `245ba14b`. That
+  repository also brings skills this profile did not have (full-review, handoff, characterization-tests,
+  systematic-debugging, verification-before-completion, test-driven-development, skill-creator,
+  webapp-testing, differential-review, insecure-defaults, supply-chain-risk-auditor). They are invoked
+  as `/skill:<name>` as before (`/skill:agentbox/<name>` on a name clash). The vendored skills' entries
+  in `THIRD_PARTY.md` moved to that repository's `THIRD_PARTY.md`.
+- Why: one source for skills shared by all agents; Tim, 19 Nov.
+- `skills/` stays: it is empty but for `skills/.gitkeep`, and `check` now allows that one file directly
+  in `skills/` (a shared rule, with a `shared:` test in all three repos). It is not dropped, though
+  agentbox would simply not mount a missing one: the mount is what makes the agent's skill path
+  read-only, and without it that path is the project's writable state, where one session could leave a
+  skill every later session loads.
+- Bumping: commit and push agentbox-skills, `ab profile install <agent> --resolve` for the sha, then
+  change `ref` in all three profiles' `plugins.toml` together.
+
 ## 2026-11-16: secret names, `status` on a broken plugins.toml, shared test labels checked
 
 - What: the secret-name rule in `tools/check.py` adds `*.key` and any path component named `secrets`

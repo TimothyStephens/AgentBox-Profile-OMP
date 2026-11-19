@@ -67,6 +67,12 @@ ALLOWED_TOP_LEVEL = {
 # validation requires this shape.
 SKILL_NAME_RE = re.compile(r"^[a-z0-9][a-z0-9-]{0,63}$")
 
+# The one plain file skills/ may hold directly: it keeps the directory in git when the profile has no skills
+# of its own (the shared ones come from the agentbox-skills plugin). skills/ must still exist, because agentbox
+# mounts it read-only over the agent's skill path; without the mount that path is writable per-project state,
+# where one session could leave a skill for every later one. No agent loads a dotfile there as a skill.
+SKILLS_PLACEHOLDER = ".gitkeep"
+
 # Frontmatter keys documented for a skill, normalized to camelCase.
 #
 # reference/omp/skills.md, "`SKILL.md` frontmatter" lists the OMP skill type's
@@ -438,6 +444,8 @@ def check_skills(root: Path, rep: Report) -> None:
         if not entry.is_dir():
             if README_RE.match(entry.name):
                 continue  # reported by check_load_directories
+            if entry.name == SKILLS_PLACEHOLDER:
+                continue  # keeps an empty skills/ in git; nothing loads it
             rep.error(rel, "unexpected file in skills/ (every skill is a directory holding SKILL.md)")
             continue
 

@@ -6,84 +6,12 @@ adds, moves or edits vendored content.
 As in the sibling Claude profile repo, every entry carries the same six fields: **name**,
 **source URL**, **path**, **commit**, **license**, **local changes**.
 
-Provenance was verified by fetching each upstream file at its pinned commit and
-diffing it against the vendored copy (2026-11-03).
-
-## skills/show-me
-
-| Field | Value |
-| --- | --- |
-| Name | `show-me` |
-| Source URL | <https://github.com/humanlayer/skills> |
-| Path | `plugins/show-me/skills/show-me` |
-| Commit | `4d69d20f6e9b57b4fcf0d501ccfb1be961f0f329` |
-| License | MIT — `skills/show-me/LICENSE` (Copyright (c) 2026 HumanLayer) |
-
-**Local changes**
-
-Two edits to the body of `SKILL.md`, plus an added `LICENSE`. The frontmatter is
-untouched and carries no comment: this file is the only record.
-
-1. **The HTML artifact is saved, not opened.** Upstream ends the "For a visual
-   UI" bullet with "Then open it for the user:" and a
-   `Bash(open path/to/show-me-{description}.html)` block. `open` is macOS-only
-   and fails in an agentbox sandbox, which has no display and no browser opener.
-   Replaced with an instruction to save the file as
-   `.dev/show-me/show-me-{description}.html` and hand the user that path, so the
-   user opens it on their own machine. `.dev/` is gitignored and is the same
-   artifact directory `AGENTS.md` gives EGM.
-2. **A terminal note under `### guidance`.** Added a paragraph saying the user
-   reads replies in a terminal, where Mermaid is source text rather than a
-   picture, so the plain-text views are preferred and a diagram that must be
-   seen rendered belongs in the HTML file. Upstream offers Mermaid without that
-   caveat.
-3. **`LICENSE` added to the skill directory.** Upstream has no LICENSE inside
-   `plugins/show-me/skills/show-me/`; this is a verbatim copy of the
-   repository-root `LICENSE` at the pinned commit, so the MIT terms travel with
-   the vendored directory.
-
-Nothing else in the body changed, and no view, example or code block was removed
-other than the `Bash(open …)` block named above.
-
-## skills/ub-mode
-
-| Field | Value |
-| --- | --- |
-| Name | `ub-mode` |
-| Source URL | <https://github.com/unclebob/ub-mode> |
-| Path | repository root (`SKILL.md`, `LICENSE`) |
-| Commit | `3da62bf3fcfd2034de41f30d920d2739e566171f` |
-| License | MIT — `skills/ub-mode/LICENSE` (Copyright (c) 2026 Robert C. Martin) |
-
-**Local changes**
-
-One frontmatter key added to `SKILL.md`; the body and `LICENSE` are
-byte-identical to upstream. No comment was added to the frontmatter: this file
-is the record.
-
-1. **`disable-model-invocation: true`.** Upstream sets no `hide` or
-   `disable-model-invocation`, so ub-mode was listed in the system prompt and the
-   model could select it on its own — and its description ("Follow the reduced
-   principles when writing or changing code") invites that on any code change,
-   not only when asked. OMP normalizes the key to `disableModelInvocation` and
-   reads it as `hide` (`reference/omp/skills.md`), so the skill is now opt-in:
-   never listed, still reachable as `/skill:ub-mode` and `skill://ub-mode`.
-   `hide` does not disable a skill. This matches `AGENTS.md`: "show-me and
-   ub-mode run only when I invoke them."
-
-## skills/mags-manifest-design
-
-| Field | Value |
-| --- | --- |
-| Name | `mags-manifest-design` |
-| Source URL | <https://github.com/TimothyStephens/MAGS-CodeDev> |
-| Path | `skills/mags-manifest-design/SKILL.md` |
-| Commit | `d44fea8c5bf4021e3103ee9671a06940fc7f713c` |
-| License | none published upstream; the repository belongs to this profile's maintainer |
-
-**Local changes**
-
-None. `SKILL.md` is byte-identical to upstream.
+No skill is vendored here at the moment. `show-me`, `ub-mode` and
+`mags-manifest-design`, with the other skills shared by every agentbox profile,
+moved to the `agentbox-skills` repository on 2026-11-19 (see
+`docs/decisions.md`). Their provenance, pinned commits, licences and local
+changes are recorded in that repository's
+[`THIRD_PARTY.md`](https://github.com/TimothyStephens/AgentBox-Skills/blob/main/THIRD_PARTY.md).
 
 ## reference/omp
 
@@ -106,3 +34,10 @@ the directories agentbox mounts.
 Plugins in [`plugins.toml`](plugins.toml) are installed by agentbox at
 `ab profile install omp`, from their own marketplaces at the pinned refs. No
 plugin content lives in this repository.
+
+- `egm@egm` — Elephant Goldfish Model, <https://github.com/google/elephant-goldfish-model>.
+- `agentbox@agentbox-skills` — the skills shared by every agentbox profile,
+  <https://github.com/TimothyStephens/AgentBox-Skills>. Third-party skills in
+  it are vendored there, and its `THIRD_PARTY.md` is their record.
+- The `[[npm]]` and `[[repo]]` entries, each at the version or commit pinned in
+  `plugins.toml`.

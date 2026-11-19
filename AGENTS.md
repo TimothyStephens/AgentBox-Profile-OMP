@@ -39,7 +39,9 @@ These apply to your replies and reports, not to code, comments, commit messages 
 
 OMP (Oh My Pi) in agentbox. Only what differs from the sibling Claude profile:
 
-- Skills are invoked as `/skill:<name>`, not `/<name>`.
+- Skills are invoked as `/skill:<name>`, not `/<name>`. The skills shared by all
+  profiles (show-me, ub-mode, learn-repo, ...) come from the `agentbox` plugin
+  and are invoked the same way, e.g. `/skill:show-me`.
 - The subagent tool is `task`; its agent definitions live in `agents/`.
 - **Task subagents never see this file.** OMP drops every context file named
   `AGENTS.md`, inherited or discovered. Anything a subagent must obey belongs

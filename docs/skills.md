@@ -32,7 +32,7 @@ found, `skills/group/<name>/SKILL.md` is not
 | Key | Effect |
 | --- | --- |
 | `hide: true` | Keeps the skill out of the system-prompt listing. Still reachable via `skill://<name>` and `/skill:<name>`. |
-| `disable-model-invocation: true` | Agent-Skills spelling of `hide`; normalized to `disableModelInvocation` and read as `hide`. This is how `show-me` stays unlisted while remaining invocable as `/skill:show-me`. |
+| `disable-model-invocation: true` | Agent-Skills spelling of `hide`; normalized to `disableModelInvocation` and read as `hide`. This is how the shared `show-me` stays unlisted while remaining invocable as `/skill:show-me`. |
 | `enabled: false` | Skips the skill entirely. |
 | `globs`, `alwaysApply` | Carried as metadata only. They do **not** auto-invoke a skill. |
 | `license` | SPDX identifier, for vendored skills. Claude Code / Agent Skills frontmatter. |
@@ -49,6 +49,47 @@ outside the list above instead of failing.
 - Model-selected from the system-prompt listing (unless hidden).
 - `/skill:<name> [args]` when `skills.enableSkillCommands` is on.
 - `read skill://<name>` / `read skill://<name>/<relative-path>`.
+
+## Shared skills: the `agentbox-skills` plugin
+
+The skills every agentbox profile has are not in `skills/`. They live in one
+repository, `agentbox-skills`
+(<https://github.com/TimothyStephens/AgentBox-Skills>), declared in
+`plugins.toml` as the marketplace plugin `agentbox@agentbox-skills` at a
+pinned commit, and are invoked like any other skill: `/skill:<name>` (on a
+name clash with another skill, `/skill:agentbox/<name>`), e.g.
+`/skill:show-me` or `/skill:learn-repo`. Provenance, licences and local
+changes of the vendored ones are in that repository's `THIRD_PARTY.md`; change
+them there, never by copying one back into `skills/`.
+
+| Skill | What for | Model-invocable |
+| --- | --- | --- |
+| `learn-repo` | build an understanding of an existing repo before a task | no |
+| `review-drift` | review another agent's work for scope creep and drift from a plan, from a clean context | no |
+| `show-me` | explain the current topic with diagrams, code-shape sketches or an HTML file under `.dev/show-me` | no |
+| `ub-mode` | the reduced coding principles, on request | no |
+| `mags-manifest-design` | write or edit a MAGs-CodeDev `manifest.json` | yes |
+| `full-review` | a read-only, comprehensive code review of a branch, range, PR or the whole repo | no |
+| `handoff` | a dated handoff note at the end of a session, for the next one's `learn-repo` | no |
+| `characterization-tests` | pin the current behaviour of untested code before changing it | no |
+| `systematic-debugging` | root-cause a bug or failure before fixing it | yes |
+| `verification-before-completion` | run the checks before claiming work is done | yes |
+| `test-driven-development` | write the test first | yes |
+| `skill-creator` | author and evaluate a skill | yes |
+| `webapp-testing` | drive a local web UI with Playwright (not in the images; see agentbox-skills' THIRD_PARTY.md) | yes |
+| `differential-review` | security-focused review of a PR, commit or diff | yes |
+| `insecure-defaults` | find fail-open insecure defaults (hardcoded secrets, weak auth) | yes |
+| `supply-chain-risk-auditor` | audit a project's dependencies (needs network the `packages` egress mostly blocks) | yes |
+
+"Model-invocable: no" means `disable-model-invocation: true`: the skill runs
+only when invoked. The list is the repository's at the pinned commit; its
+README is the current one.
+
+`skills/` holds only skills this profile alone has, and none today: it is empty
+but for `.gitkeep`, which keeps it in git. It must still exist, because
+agentbox mounts it read-only over the skill path; that `.gitkeep` is the one
+plain file `check` allows directly in `skills/`. A skill every profile should
+have goes in `agentbox-skills` instead.
 
 ## Authoring notes
 

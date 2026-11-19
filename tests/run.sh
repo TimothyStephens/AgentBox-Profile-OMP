@@ -230,6 +230,15 @@ run_case "shared: no loose files in skills/ — fail" fail \
 	"unexpected file in skills/" \
 	"printf 'x\n' > skills/stray.md"
 
+# The shared skills come from the agentbox-skills plugin, so skills/ may hold no skill at all. It still
+# exists (agentbox mounts it read-only over the skill path), kept in git by a .gitkeep and nothing else.
+run_case "shared: empty skills/ kept by .gitkeep — pass" ok "" \
+	"rm -rf skills/* && : > skills/.gitkeep"
+
+run_case "shared: empty skills/ kept by .gitkeep — fail (any other file)" fail \
+	"skills/.keep: unexpected file in skills/" \
+	"rm -rf skills/* && : > skills/.keep"
+
 # --- load directories hold only loadable items -----------------------------
 # agentbox mounts these directories onto discovery paths, so documentation in
 # one is loaded as content: a commands/README.md becomes a /README command.

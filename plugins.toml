@@ -64,6 +64,17 @@ marketplace = "egm"
 source = "google/elephant-goldfish-model"
 ref = "464db031e7dd1b9a79803ac8ea45f55c7c20c5bc"
 
+# agentbox-skills (TimothyStephens/AgentBox-Skills): the skills shared by all three agentbox profiles
+# (Claude Code, OMP, Pi) live there, in one repository, instead of as copies in each profile's skills/. Its
+# README says how each agent loads it and how a skill is invoked; its THIRD_PARTY.md holds the provenance of
+# the vendored skills. To bump: commit and push agentbox-skills, run `ab profile install <agent> --resolve`
+# for the new sha, and change `ref` here and in the other two profiles' plugins.toml together.
+[[plugin]]
+id = "agentbox@agentbox-skills"
+marketplace = "agentbox-skills"
+source = "TimothyStephens/AgentBox-Skills"
+ref = "245ba14b4369e3f1596fe9950d8da6b7a4323cdb"
+
 # --- npm packages ----------------------------------------------------------------------------------
 #
 # These four were installed by omp-env with `npm install -g`. THE VERSIONS BELOW ARE THE CURRENT ONES
@@ -100,7 +111,8 @@ version = "0.1.1"              # unchanged since omp-env
 # removed that directory, and the ref this file pinned (d44fea8c, 4 Nov) is after it: `ab profile install
 # omp` failed on `omp plugin link` with "package.json not found" and, being fail-fast, took the marketplace
 # copy down with it. MAGS is a standalone Python CLI now, meant to run as its own agentbox agent (its
-# README, "Running under agentbox"); what this profile keeps of it is skills/mags-manifest-design.
+# README, "Running under agentbox"); what this profile keeps of it is the mags-manifest-design skill,
+# which now comes from agentbox-skills (above).
 #
 # pi-nvim-bridge is NOT here: Tim does not need it. (The profile's own note already said its install id was
 # not findable in the vendored reference docs.)
