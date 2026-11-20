@@ -85,6 +85,10 @@ ref = "21b85ee967d513db8aa44f51a31086111d74e310"
 #
 # @isac322/pi-codegraph (omp-env had 0.3.1, latest 0.5.2) is NOT here: it was not in the list Tim asked
 # for. One [[npm]] entry adds it back.
+#
+# pi-lens (omp-env: 3.8.73; last pinned 4.4.9) is NOT here since 20 Nov (Tim): its point is running language
+# servers and linters after each edit, which it installs on demand -- and agentbox now turns those installs
+# off (unpinned npm/pip/gem code) while the images carry none of the tools. OMP has its own LSP support.
 
 [[npm]]
 name = "@narumitw/pi-statusline"
@@ -93,10 +97,6 @@ version = "0.50.4"             # omp-env: 0.38.0
 [[npm]]
 name = "pi-context-prune"
 version = "2.2.0"              # omp-env: 1.2.0
-
-[[npm]]
-name = "pi-lens"
-version = "4.4.9"              # omp-env: 3.8.73
 
 [[npm]]
 name = "pi-rules"

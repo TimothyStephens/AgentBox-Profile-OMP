@@ -109,3 +109,11 @@
 - Why: the Claude repo's latest `build.sh` changes were to be synced to the OMP repo, and the
   parity discussion taken out of the README and `PARITY.md`, since the review that did the sync
   made the repos match. The shared parts are now listed in one paragraph of each README.
+
+## 2026-11-20: pi-lens is dropped
+
+- What: pi-lens 4.4.9 is removed from `plugins.toml` (and from the Pi profile's).
+- Why: Tim, 20 Nov. It installs the language servers and linters it runs on demand; agentbox now turns those
+  installs off (unpinned npm/pip/gem code) and no image carries the tools, so little of it worked, at about
+  290,000 lines and a prompt cost every session. OMP has its own LSP support (`src/lsp`). The `PI_LENS_DISABLE_*`
+  variables agentbox sets stay, in case it comes back with pinned tools in an image.
