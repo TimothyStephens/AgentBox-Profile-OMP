@@ -770,7 +770,7 @@ exit_code_case "omp: build.sh status lists [[npm]] entries — pass" 0 \
 	"$BUILD" status
 
 exit_code_case "omp: build.sh status lists [[repo]] entries — pass" 0 \
-	"  pi-session-stats  https://github.com/TimothyStephens/pi-session-stats.git  b37a22593c15" \
+	"  pi-session-stats  https://github.com/TimothyStephens/pi-session-stats.git  7c7ddbad6099" \
 	"$BUILD" status
 
 exit_code_case "shared: build.sh status reports a missing live profile as clonable — pass" 0 \

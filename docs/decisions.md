@@ -117,3 +117,12 @@
   installs off (unpinned npm/pip/gem code) and no image carries the tools, so little of it worked, at about
   290,000 lines and a prompt cost every session. OMP has its own LSP support (`src/lsp`). The `PI_LENS_DISABLE_*`
   variables agentbox sets stay, in case it comes back with pinned tools in an image.
+
+## 2026-11-20: pi-session-stats and pi-content-audit at 7c7ddba and a427f1a
+
+- What: both pins moved to the commits that declare `@oh-my-pi/*` as optional peer dependencies instead of
+  dependencies.
+- Why: `ab profile install pi` failed on 20 Nov: the installer's `npm install` in the pi-session-stats
+  checkout downloaded OMP (151 packages) and was killed for memory (exit 137, reproduced). Neither host
+  loads those copies (Pi aliases them, OMP remaps them to its bundled copy), so the install now fetches
+  nothing; OMP 18.13.3 was checked loading both extensions from a checkout with no node_modules.
