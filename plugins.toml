@@ -120,12 +120,12 @@ version = "0.1.1"              # unchanged since omp-env
 [[repo]]
 name = "pi-session-stats"
 url = "https://github.com/TimothyStephens/pi-session-stats.git"
-ref = "9c7a0c2dd1900dcd98aa7be0d84bbee214967d96"
+ref = "b37a22593c15be49c35f64d1c7c30e6069a31223"
 
 [[repo]]
 name = "pi-content-audit"
 url = "https://github.com/TimothyStephens/pi-content-audit.git"
-ref = "7aa11e085d2be4a2327307d8121977f200e0e0ce"
+ref = "0c8a7d0793bb16bf07dc04aadfbd11b983595510"
 
 
 
